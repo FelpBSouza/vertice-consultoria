@@ -3,9 +3,11 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const authHashParams = new URLSearchParams(window.location.hash.slice(1));
 const authQueryParams = new URLSearchParams(window.location.search);
+const authCallbackType = authHashParams.get("type") || authQueryParams.get("type");
 let invitationFlow =
-  ["invite", "recovery"].includes(authHashParams.get("type") || authQueryParams.get("type")) ||
+  ["invite", "recovery"].includes(authCallbackType) ||
   authQueryParams.has("code");
+let passwordRecoveryFlow = authCallbackType === "recovery";
 let authCallbackError =
   authHashParams.has("error") ||
   authHashParams.has("error_code") ||
@@ -19,6 +21,7 @@ const toast = $("#toast");
 const authScreen = $("#auth-screen");
 const appShell = $("#app-shell");
 const loginForm = $("#login-form");
+const signupForm = $("#signup-form");
 const passwordSetupForm = $("#password-setup-form");
 const authMessage = $("#auth-message");
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -30,6 +33,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 let companies = [];
 let toastTimer;
 let sessionRequest = 0;
+let currentRole = null;
 
 function showToast(message) {
   toast.textContent = message;
@@ -110,7 +114,7 @@ const pages = {
 };
 
 function navigate(page) {
-  if (!pages[page]) return;
+  if (!pages[page] || (currentRole !== "admin" && page !== "client")) return;
   $$(".nav button").forEach(button => {
     const active = button.dataset.page === page;
     button.classList.toggle("active", active);
@@ -133,11 +137,53 @@ async function loadCompanies() {
   if (error) {
     console.error("Erro ao carregar empresas:", error);
     showToast("Não foi possível carregar as empresas. Tente novamente.");
-    return;
+    return false;
   }
 
   companies = data.map(normalizeCompany);
   renderCompanies($("#global-search").value);
+  return true;
+}
+
+function renderClientWorkspace() {
+  const company = companies[0];
+  $("#client-company-name").textContent = company?.name || "Empresa não encontrada";
+  $("#client-company-sector").textContent = company?.sector || "";
+  $("#client-company-status").textContent = company?.status || "Cadastro pendente";
+}
+
+async function ensureOwnerCompany(session) {
+  const { data: membership, error: membershipError } = await supabase
+    .from("vertice_company_memberships")
+    .select("company_id")
+    .eq("user_id", session.user.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    console.error("Erro ao verificar empresa vinculada:", membershipError);
+    return false;
+  }
+  if (membership) return true;
+
+  const metadata = session.user.user_metadata || {};
+  const companyName = typeof metadata.company_name === "string" ? metadata.company_name.trim() : "";
+  const companySector = typeof metadata.company_sector === "string" ? metadata.company_sector.trim() : "";
+  if (!companyName || !companySector) {
+    console.error("Dados da empresa não encontrados no cadastro.");
+    return false;
+  }
+
+  const { error } = await supabase.rpc("vertice_create_company_for_owner", {
+    p_name: companyName,
+    p_sector: companySector
+  });
+  if (error) {
+    console.error("Erro ao preparar empresa do novo cliente:", error);
+    return false;
+  }
+
+  return true;
 }
 
 async function handleSession(session) {
@@ -145,11 +191,17 @@ async function handleSession(session) {
   showAuthMessage("");
 
   if (!session) {
+    currentRole = null;
+    companies = [];
     appShell.hidden = true;
+    appShell.classList.remove("client-mode");
     authScreen.hidden = false;
-    loginForm.hidden = invitationFlow;
+    loginForm.hidden = invitationFlow || passwordRecoveryFlow;
+    signupForm.hidden = true;
     passwordSetupForm.hidden = true;
-    if (invitationFlow) {
+    if (passwordRecoveryFlow) {
+      showAuthMessage("Este link de recuperação expirou ou não é válido. Solicite um novo link.");
+    } else if (invitationFlow) {
       showAuthMessage("O convite expirou ou não é válido. Peça um novo convite ao administrador.");
     } else if (authCallbackError) {
       showAuthMessage("Este link expirou ou já foi usado. Solicite um novo link de acesso.");
@@ -157,10 +209,12 @@ async function handleSession(session) {
     return;
   }
 
-  if (invitationFlow) {
+  const customerSignup = session.user.user_metadata?.vertice_signup === true;
+  if (passwordRecoveryFlow || (invitationFlow && !customerSignup)) {
     appShell.hidden = true;
     authScreen.hidden = false;
     loginForm.hidden = true;
+    signupForm.hidden = true;
     passwordSetupForm.hidden = false;
     return;
   }
@@ -174,24 +228,54 @@ async function handleSession(session) {
   if (request !== sessionRequest) return;
   if (error) {
     console.error("Erro ao verificar perfil:", error);
+    currentRole = null;
+    companies = [];
+    appShell.classList.remove("client-mode");
     appShell.hidden = true;
     authScreen.hidden = false;
     loginForm.hidden = false;
+    signupForm.hidden = true;
+    passwordSetupForm.hidden = true;
     showAuthMessage("Não foi possível verificar seu acesso. Tente novamente.");
     return;
   }
 
-  if (profile?.role !== "admin") {
+  const isAdmin = profile?.role === "admin";
+  const isCompanyOwner = profile?.role === "company_owner";
+  if (!isAdmin && !isCompanyOwner) {
     await supabase.auth.signOut();
     showAuthMessage("Esta conta não tem permissão de administrador.");
     return;
   }
 
+  if (isCompanyOwner && !(await ensureOwnerCompany(session))) {
+    if (request !== sessionRequest) return;
+    appShell.hidden = true;
+    authScreen.hidden = false;
+    loginForm.hidden = true;
+    signupForm.hidden = true;
+    passwordSetupForm.hidden = true;
+    showAuthMessage("Não foi possível preparar o espaço da empresa. Recarregue a página ou contate o suporte.");
+    return;
+  }
+
+  if (request !== sessionRequest) return;
+  currentRole = profile.role;
+  appShell.classList.toggle("client-mode", isCompanyOwner);
   authScreen.hidden = true;
   appShell.hidden = false;
   $("#profile-name").textContent = session.user.email || "Administrador";
-  $("#profile-role").textContent = "Administrador";
-  await loadCompanies();
+  $("#profile-role").textContent = isAdmin ? "Administrador" : "Cliente";
+  companies = [];
+  if (isCompanyOwner) {
+    renderClientWorkspace();
+    navigate("client");
+  } else {
+    navigate("dashboard");
+  }
+  const companiesLoaded = await loadCompanies();
+  if (request !== sessionRequest || !companiesLoaded) return;
+  if (isCompanyOwner) renderClientWorkspace();
 }
 
 function openModal() {
@@ -270,6 +354,83 @@ loginForm.addEventListener("submit", async event => {
   }
 });
 
+$("#show-signup").addEventListener("click", () => {
+  showAuthMessage("");
+  loginForm.hidden = true;
+  signupForm.hidden = false;
+  passwordSetupForm.hidden = true;
+  $("#signup-company-name").focus();
+});
+
+$("#show-login").addEventListener("click", () => {
+  showAuthMessage("");
+  signupForm.hidden = true;
+  passwordSetupForm.hidden = true;
+  loginForm.hidden = false;
+  $("#login-email").focus();
+});
+
+signupForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  showAuthMessage("");
+
+  const companyName = $("#signup-company-name").value.trim();
+  const companySector = $("#signup-company-sector").value;
+  const email = $("#signup-email").value.trim().toLowerCase();
+  const password = $("#signup-password").value;
+  if (companyName.length < 2 || companyName.length > 150) {
+    showAuthMessage("Informe um nome de empresa entre 2 e 150 caracteres.");
+    return;
+  }
+  if (password.length < 12) {
+    showAuthMessage("Use uma senha com pelo menos 12 caracteres.");
+    return;
+  }
+  if (password !== $("#signup-password-confirm").value) {
+    showAuthMessage("As senhas não conferem.");
+    return;
+  }
+
+  const button = $("#signup-button");
+  button.disabled = true;
+  button.textContent = "Criando conta...";
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: new URL(window.location.pathname, window.location.origin).href,
+      data: {
+        vertice_signup: true,
+        company_name: companyName,
+        company_sector: companySector
+      }
+    }
+  });
+  button.disabled = false;
+  button.textContent = "Criar conta";
+
+  if (error) {
+    console.error("Falha ao criar conta:", error);
+    showAuthMessage(
+      error.status === 429
+        ? "Muitas tentativas. Aguarde um pouco e tente novamente."
+        : "Não foi possível criar a conta. Verifique os dados e tente novamente."
+    );
+    return;
+  }
+
+  signupForm.reset();
+  $("#login-email").value = email;
+  if (data.session) {
+    await handleSession(data.session);
+    return;
+  }
+
+  signupForm.hidden = true;
+  loginForm.hidden = false;
+  showAuthMessage("Cadastro iniciado. Confirme seu e-mail para ativar o acesso à sua empresa.", true);
+});
+
 $("#forgot-password").addEventListener("click", async event => {
   event.preventDefault();
   showAuthMessage("");
@@ -320,6 +481,7 @@ passwordSetupForm.addEventListener("submit", async event => {
   }
 
   invitationFlow = false;
+  passwordRecoveryFlow = false;
   authCallbackError = false;
   window.history.replaceState({}, "", window.location.pathname);
   const { data, error: sessionError } = await supabase.auth.getSession();
@@ -377,7 +539,10 @@ $$("[data-range]").forEach(button => button.addEventListener("click", () => {
 }));
 
 supabase.auth.onAuthStateChange((event, session) => {
-  if (event === "PASSWORD_RECOVERY") invitationFlow = true;
+  if (event === "PASSWORD_RECOVERY") {
+    invitationFlow = true;
+    passwordRecoveryFlow = true;
+  }
   if (["INITIAL_SESSION", "SIGNED_IN", "SIGNED_OUT", "PASSWORD_RECOVERY"].includes(event)) {
     window.setTimeout(() => handleSession(session), 0);
   }

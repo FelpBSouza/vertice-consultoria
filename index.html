@@ -13,13 +13,23 @@
       <div class="auth-brand"><span class="auth-mark">V</span><span>VÉRTICE</span></div>
       <div class="eyebrow">ÁREA RESTRITA</div>
       <h1>Acesso à consultoria</h1>
-      <p class="auth-description">Entre com seu e-mail autorizado para acessar as informações das empresas.</p>
+      <p class="auth-description">Entre ou crie uma conta para sua empresa começar a usar o Vértice.</p>
       <div class="auth-message" id="auth-message" role="alert" hidden></div>
       <form class="auth-form" id="login-form">
         <div class="form-field"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required placeholder="voce@empresa.com"></div>
         <div class="form-field"><label for="login-password">Senha</label><input id="login-password" type="password" autocomplete="current-password" required placeholder="Sua senha"></div>
         <button class="btn btn-primary" id="login-button" type="submit">Entrar</button>
         <button class="auth-link" id="forgot-password" type="button">Esqueci minha senha</button>
+        <button class="auth-link" id="show-signup" type="button">Criar conta para minha empresa</button>
+      </form>
+      <form class="auth-form" id="signup-form" hidden>
+        <div class="form-field"><label for="signup-company-name">Nome da empresa</label><input id="signup-company-name" type="text" autocomplete="organization" minlength="2" maxlength="150" required placeholder="Ex.: Empresa Exemplo Ltda."></div>
+        <div class="form-field"><label for="signup-company-sector">Setor de atuação</label><select id="signup-company-sector" required><option value="" selected disabled>Selecione o setor</option><option>Comércio</option><option>Indústria</option><option>Serviços</option><option>Tecnologia</option><option>Saúde</option><option>Logística</option><option>Outro</option></select></div>
+        <div class="form-field"><label for="signup-email">E-mail</label><input id="signup-email" type="email" autocomplete="email" required placeholder="voce@empresa.com"></div>
+        <div class="form-field"><label for="signup-password">Criar senha</label><input id="signup-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Mínimo de 12 caracteres"></div>
+        <div class="form-field"><label for="signup-password-confirm">Confirmar senha</label><input id="signup-password-confirm" type="password" autocomplete="new-password" minlength="12" required placeholder="Repita a senha"></div>
+        <button class="btn btn-primary" id="signup-button" type="submit">Criar conta</button>
+        <button class="auth-link" id="show-login" type="button">Já tenho uma conta</button>
       </form>
       <form class="auth-form" id="password-setup-form" hidden>
         <div class="form-field"><label for="new-password">Criar senha</label><input id="new-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Mínimo de 12 caracteres"></div>
@@ -131,6 +141,19 @@
           <div class="page-heading"><div><div class="eyebrow">Análises e acompanhamento</div><h1>Relatórios</h1><div class="subheading">Organize diagnósticos financeiros e materiais de reunião.</div></div></div>
           <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Relatórios demonstrativos. Para uso profissional, incluir origem, competência, responsável, validações e trilha de auditoria.</span></div>
           <div class="section-grid"><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3.5h8l4.5 4.7v12.3H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v5h4.5M8 13h8M8 16.5h6"/></svg></div><h3>Cadastro de empresas</h3><p>Lista demonstrativa das empresas acompanhadas e dados básicos de faturamento.</p><button class="btn" data-export>Baixar CSV</button></article><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/></svg></div><h3>Diagnóstico financeiro</h3><p>Consulte o balanço, a DRE simplificada e o cenário de investimentos demonstrativo.</p><button class="btn" data-page-link="accounting">Ver balanço</button></article></div>
+        </section>
+        <section class="page-section" id="page-client">
+          <div class="page-heading"><div><div class="eyebrow">Área da empresa</div><h1>Minha empresa</h1><div class="subheading">Acompanhe o cadastro e os próximos passos da consultoria.</div></div></div>
+          <div class="demo-note"><span>Seu acesso é restrito à empresa vinculada à sua conta. Os módulos financeiros serão liberados conforme os serviços contratados.</span></div>
+          <article class="card panel client-company-card">
+            <div class="panel-heading"><div><div class="panel-title">Dados da empresa</div><div class="panel-caption">Informações cadastradas na criação da conta</div></div><span class="company-status" id="client-company-status">Carregando</span></div>
+            <h2 class="client-company-name" id="client-company-name">Carregando...</h2>
+            <p class="client-company-sector" id="client-company-sector"></p>
+          </article>
+          <article class="card panel client-next-steps">
+            <div class="panel-title">Próximos passos</div>
+            <p>Depois que o cadastro for validado, sua consultoria poderá organizar os dados contábeis e financeiros para iniciar o diagnóstico.</p>
+          </article>
         </section>
         <div class="disclaimer">Vértice é um protótipo demonstrativo. Dados reais exigem armazenamento seguro, validação contábil, consentimentos e revisão regulatória aplicável.</div>
       </div>
