@@ -1,6 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
+const authHashParams = new URLSearchParams(window.location.hash.slice(1));
+const authQueryParams = new URLSearchParams(window.location.search);
+let invitationFlow =
+  ["invite", "recovery"].includes(authHashParams.get("type") || authQueryParams.get("type")) ||
+  authQueryParams.has("code");
+let authCallbackError =
+  authHashParams.has("error") ||
+  authHashParams.has("error_code") ||
+  authQueryParams.has("error") ||
+  authQueryParams.has("error_code");
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -19,9 +30,6 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 let companies = [];
 let toastTimer;
 let sessionRequest = 0;
-let invitationFlow = ["invite", "recovery"].includes(
-  new URLSearchParams(window.location.hash.slice(1)).get("type")
-);
 
 function showToast(message) {
   toast.textContent = message;
@@ -137,6 +145,8 @@ async function handleSession(session) {
     passwordSetupForm.hidden = true;
     if (invitationFlow) {
       showAuthMessage("O convite expirou ou não é válido. Peça um novo convite ao administrador.");
+    } else if (authCallbackError) {
+      showAuthMessage("Este link expirou ou já foi usado. Solicite um novo link de acesso.");
     }
     return;
   }
@@ -254,6 +264,36 @@ loginForm.addEventListener("submit", async event => {
   }
 });
 
+$("#forgot-password").addEventListener("click", async event => {
+  event.preventDefault();
+  showAuthMessage("");
+  const email = $("#login-email").value.trim();
+  if (!email) {
+    showAuthMessage("Informe seu e-mail para receber um link de recuperação.");
+    $("#login-email").focus();
+    return;
+  }
+
+  const button = $("#forgot-password");
+  button.disabled = true;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: new URL(window.location.pathname, window.location.origin).href
+  });
+  button.disabled = false;
+
+  if (error) {
+    console.error("Falha ao solicitar recuperação de senha:", error);
+    showAuthMessage(
+      error.status === 429
+        ? "O limite de e-mails foi atingido. Aguarde um pouco e tente novamente."
+        : "Não foi possível enviar o link. Tente novamente mais tarde."
+    );
+    return;
+  }
+
+  showAuthMessage("Se o e-mail estiver cadastrado, enviaremos um link para criar uma nova senha.", true);
+});
+
 passwordSetupForm.addEventListener("submit", async event => {
   event.preventDefault();
   const password = $("#new-password").value;
@@ -274,7 +314,8 @@ passwordSetupForm.addEventListener("submit", async event => {
   }
 
   invitationFlow = false;
-  window.history.replaceState({}, "", window.location.pathname + window.location.search);
+  authCallbackError = false;
+  window.history.replaceState({}, "", window.location.pathname);
   const { data, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) {
     showAuthMessage("A senha foi salva, mas não foi possível validar a sessão. Entre novamente.");
@@ -330,6 +371,7 @@ $$("[data-range]").forEach(button => button.addEventListener("click", () => {
 }));
 
 supabase.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") invitationFlow = true;
   if (["INITIAL_SESSION", "SIGNED_IN", "SIGNED_OUT", "PASSWORD_RECOVERY"].includes(event)) {
     window.setTimeout(() => handleSession(session), 0);
   }
