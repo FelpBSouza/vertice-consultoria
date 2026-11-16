@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.119.0";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const authHashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -92,6 +92,12 @@ function escapeHTML(value) {
     '"': "&quot;",
     "'": "&#39;"
   })[character]);
+}
+
+function escapeCSVCell(value) {
+  const cell = String(value);
+  const safeCell = /^\s*[=+\-@]/.test(cell) ? `'${cell}` : cell;
+  return `"${safeCell.replace(/"/g, '""')}"`;
 }
 
 const pages = {
@@ -203,7 +209,7 @@ function exportCompanies() {
     ["Empresa", "Setor", "Faturamento mensal", "EBITDA", "Status"],
     ...companies.map(({ name, sector, revenue, ebitda, status }) => [name, sector, revenue, ebitda, status])
   ];
-  const csv = "\uFEFF" + csvRows.map(row => row.map(value => `"${value.replace(/"/g, '""')}"`).join(";")).join("\r\n");
+  const csv = "\uFEFF" + csvRows.map(row => row.map(escapeCSVCell).join(";")).join("\r\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   link.download = "vertice-empresas.csv";
