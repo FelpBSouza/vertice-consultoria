@@ -1,17 +1,24 @@
 # Vértice — Consultoria empresarial
 
-Protótipo estático de uma plataforma para consultoria financeira empresarial. A interface reúne empresas, balanço patrimonial e DRE demonstrativos, contexto econômico e cenários ilustrativos de uso do caixa.
+Aplicação estática para consultoria financeira empresarial, hospedada no GitHub Pages e conectada ao Supabase para autenticação e cadastro de empresas.
 
-## Executar
+## Arquivos
 
-Abra `index.html` em um navegador. O projeto não requer instalação de dependências nem servidor para a demonstração.
+- `index.html` — telas da aplicação
+- `css/style.css` — estilos responsivos
+- `js/app.js` — autenticação, navegação e operações de empresas
+- `js/config.js` — URL e chave pública do Supabase
+- `supabase/migrations/` — schema, RLS e perfil administrador inicial
 
-## Estrutura
+## Configuração do Supabase
 
-- `index.html` — estrutura das telas
-- `css/style.css` — estilos e layout responsivo
-- `js/app.js` — navegação e interações demonstrativas
+1. Execute as migrations da pasta `supabase/migrations/` no SQL Editor do projeto.
+2. Cadastre o e-mail do administrador em `public.vertice_admin_allowlist` pelo SQL Editor.
+3. Configure a URL do GitHub Pages como Site URL e Redirect URL em Auth → URL Configuration.
+4. Convide o administrador em Authentication → Users. O trigger atribui o perfil `admin` ao e-mail autorizado; o usuário define a própria senha pelo convite.
 
-## Importante
+`js/config.js` contém somente a chave pública `publishable`, apropriada para o navegador. Nunca coloque uma chave `service_role` ou outra chave secreta no repositório. O acesso aos dados é protegido por RLS no banco.
 
-Os valores e empresas são fictícios. Este protótipo não realiza escrituração contábil, não salva dados e não fornece recomendações de investimento. Não insira informações financeiras reais.
+## Dados demonstrativos
+
+As empresas seed e os indicadores financeiros são fictícios. O painel ainda não realiza escrituração contábil nem produz recomendações de investimento.

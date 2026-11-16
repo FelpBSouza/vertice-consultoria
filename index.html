@@ -8,7 +8,27 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="app">
+  <section class="auth-screen" id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="auth-mark">V</span><span>VÉRTICE</span></div>
+      <div class="eyebrow">ÁREA RESTRITA</div>
+      <h1>Acesso à consultoria</h1>
+      <p class="auth-description">Entre com seu e-mail autorizado para acessar as informações das empresas.</p>
+      <div class="auth-message" id="auth-message" role="alert" hidden></div>
+      <form class="auth-form" id="login-form">
+        <div class="form-field"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required placeholder="voce@empresa.com"></div>
+        <div class="form-field"><label for="login-password">Senha</label><input id="login-password" type="password" autocomplete="current-password" required placeholder="Sua senha"></div>
+        <button class="btn btn-primary" id="login-button" type="submit">Entrar</button>
+      </form>
+      <form class="auth-form" id="password-setup-form" hidden>
+        <div class="form-field"><label for="new-password">Criar senha</label><input id="new-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Mínimo de 12 caracteres"></div>
+        <div class="form-field"><label for="confirm-password">Confirmar senha</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Repita a senha"></div>
+        <button class="btn btn-primary" type="submit">Salvar senha e entrar</button>
+      </form>
+      <p class="auth-foot">Acesso protegido. Nunca compartilhe sua senha.</p>
+    </div>
+  </section>
+  <div class="app" id="app-shell" hidden>
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
@@ -27,7 +47,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="upgrade">        <div class="upgrade-title">Fechamento contábil</div><p>Concilie os lançamentos e atualize o balanço patrimonial do mês.</p><a href="#" data-page-link="accounting">Abrir contabilidade →</a></div>
-        <div class="profile"><div class="avatar">MC</div><div><div class="profile-name">Mariana Costa</div><div class="profile-role">Consultora empresarial</div></div></div>
+        <div class="profile"><div class="avatar">VC</div><div><div class="profile-name" id="profile-name">Usuário</div><div class="profile-role" id="profile-role">Administrador</div></div></div>
       </div>
     </aside>
 
@@ -37,6 +57,7 @@
         <div class="top-actions">
           <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="global-search" type="search" placeholder="Buscar empresa..." aria-label="Buscar empresa"></label>
           <button class="icon-button" id="notification-button" aria-label="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 9a6 6 0 0 0-12 0c0 7-2.5 7-2.5 9h17C20.5 16 18 16 18 9ZM10 21h4"/></svg><span class="notification-dot"></span></button>
+          <button class="btn" id="sign-out" type="button">Sair</button>
         </div>
       </header>
 
@@ -78,7 +99,7 @@
 
         <section class="page-section" id="page-companies">
           <div class="page-heading"><div><div class="eyebrow">Carteira de consultoria</div><h1>Empresas</h1><div class="subheading">Cadastros e visão inicial dos negócios atendidos.</div></div><button class="btn btn-primary" data-add-company><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova empresa</button></div>
-          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Empresas e valores fictícios. Esta demonstração não armazena os dados após atualizar a página.</span></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Empresas demonstrativas; os novos cadastros são salvos no Supabase.</span></div>
           <article class="card clients-panel"><div class="panel-heading"><div><div class="panel-title">Negócios acompanhados</div><div class="panel-caption"><span id="company-count">5</span> resultados</div></div><button class="btn" data-export>Exportar lista</button></div><table class="client-table"><thead><tr><th>EMPRESA</th><th>SETOR</th><th>FATURAMENTO MENSAL</th><th>EBITDA</th><th>STATUS</th></tr></thead><tbody id="all-company-rows"></tbody></table></article>
         </section>
 
@@ -122,6 +143,6 @@
     </div>
   </div>
 
-  <script src="js/app.js" defer></script>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
