@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7f6">
+  <meta name="description" content="Acesse seu diagnóstico financeiro empresarial com segurança.">
+  <title>Vértice — Portal da empresa</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <section class="auth-screen" id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="auth-mark">V</span><span>VÉRTICE</span></div>
+      <div class="eyebrow">ÁREA RESTRITA</div>
+      <h1>Acesso à consultoria</h1>
+      <p class="auth-description">Entre ou crie uma conta para sua empresa começar a usar o Vértice.</p>
+      <div class="auth-message" id="auth-message" role="alert" hidden></div>
+      <form class="auth-form" id="login-form">
+        <div class="form-field"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required placeholder="voce@empresa.com"></div>
+        <div class="form-field"><label for="login-password">Senha</label><input id="login-password" type="password" autocomplete="current-password" required placeholder="Sua senha"></div>
+        <button class="btn btn-primary" id="login-button" type="submit">Entrar</button>
+        <button class="auth-link" id="forgot-password" type="button">Esqueci minha senha</button>
+        <button class="auth-link" id="show-signup" type="button">Criar conta para minha empresa</button>
+      </form>
+      <form class="auth-form" id="signup-form" hidden>
+        <div class="form-field"><label for="signup-company-name">Nome da empresa</label><input id="signup-company-name" type="text" autocomplete="organization" minlength="2" maxlength="150" required placeholder="Ex.: Empresa Exemplo Ltda."></div>
+        <div class="form-field"><label for="signup-company-sector">Setor de atuação</label><select id="signup-company-sector" required><option value="" selected disabled>Selecione o setor</option><option>Comércio</option><option>Indústria</option><option>Serviços</option><option>Tecnologia</option><option>Saúde</option><option>Logística</option><option>Outro</option></select></div>
+        <div class="form-field"><label for="signup-email">E-mail</label><input id="signup-email" type="email" autocomplete="email" required placeholder="voce@empresa.com"></div>
+        <div class="form-field"><label for="signup-password">Criar senha</label><input id="signup-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Mínimo de 12 caracteres"></div>
+        <div class="form-field"><label for="signup-password-confirm">Confirmar senha</label><input id="signup-password-confirm" type="password" autocomplete="new-password" minlength="12" required placeholder="Repita a senha"></div>
+        <button class="btn btn-primary" id="signup-button" type="submit">Criar conta</button>
+        <button class="auth-link" id="show-login" type="button">Já tenho uma conta</button>
+      </form>
+      <form class="auth-form" id="password-setup-form" hidden>
+        <div class="form-field"><label for="new-password">Criar senha</label><input id="new-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Mínimo de 12 caracteres"></div>
+        <div class="form-field"><label for="confirm-password">Confirmar senha</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="12" required placeholder="Repita a senha"></div>
+        <button class="btn btn-primary" type="submit">Salvar senha e entrar</button>
+      </form>
+      <p class="auth-foot"><a href="./">Voltar para o site</a> · Acesso protegido. Nunca compartilhe sua senha.</p>
+    </div>
+  </section>
+  <div class="app" id="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 17.5 10 5l3.3 7 2.1-4.2L20 17.5H4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M7.2 14h9.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <div><div class="brand-name">VÉRTICE</div><div class="brand-sub">CONSULTORIA EMPRESARIAL</div></div>
+      </div>
+      <p class="nav-label">Workspace</p>
+      <nav class="nav" aria-label="Navegação principal">
+        <button class="active" data-page="dashboard" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Visão geral</button>
+        <button data-page="admin-accounts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19v-1.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V19M16 5.2a3.2 3.2 0 0 1 0 6.2M17 13.2a4.8 4.8 0 0 1 3.5 4.6V19"/></svg>Contas</button>
+        <button data-page="companies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V6.5L12 3l8 3.5V20H4Z"/><path d="M8 9h1M15 9h1M8 13h1M15 13h1M10 20v-3h4v3"/></svg>Empresas<span class="nav-count">5</span></button>
+        <button data-page="financial-analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5h16M6.5 16v-4M12 16V6M17.5 16v-7"/><path d="m5 9 4-3 3 2 6-5"/></svg>Diagnóstico</button>
+        <button data-page="accounting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h12a2 2 0 0 1 2 2v15H4v-15a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>Contabilidade</button>
+        <button data-page="investments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/><path d="m5 7 4-3 4 2 6-4"/></svg>Investimentos</button>
+        <button data-page="economy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.7-.8-1.8-1.2-3.1-1.2-1.6 0-2.7.7-2.7 1.8 0 3 6.5 1.2 6.5 4.7 0 1.4-1.4 2.5-3.5 2.5-1.5 0-2.8-.5-3.7-1.5M12 5.5v13"/></svg>Economia</button>
+        <button data-page="reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h8l4.5 4.7v12.3H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v5h4.5M8 13h8M8 16.5h6"/></svg>Relatórios</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="upgrade">        <div class="upgrade-title">Fechamento contábil</div><p>Concilie os lançamentos e atualize o balanço patrimonial do mês.</p><a href="#" data-page-link="accounting">Abrir contabilidade →</a></div>
+        <div class="profile"><div class="avatar">VC</div><div><div class="profile-name" id="profile-name">Usuário</div><div class="profile-role" id="profile-role">Administrador</div></div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Workspace <span aria-hidden="true">/</span> <strong id="crumb-current" style="color:#536158;font-weight:550">Visão geral</strong></div>
+        <div class="top-actions">
+          <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></svg><input id="global-search" type="search" placeholder="Buscar empresa..." aria-label="Buscar empresa"></label>
+          <button class="icon-button" id="notification-button" aria-label="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 9a6 6 0 0 0-12 0c0 7-2.5 7-2.5 9h17C20.5 16 18 16 18 9ZM10 21h4"/></svg><span class="notification-dot"></span></button>
+          <button class="btn" id="sign-out" type="button">Sair</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="page-section visible" id="page-dashboard">
+          <div class="page-heading">
+            <div><div class="eyebrow">CONSULTORIA FINANCEIRA EMPRESARIAL</div><h1>Orla Café e Alimentos Ltda.</h1><div class="subheading">Diagnóstico integrado: contabilidade, caixa, economia e investimentos.</div></div>
+            <div class="heading-actions"><button class="btn" data-page-link="accounting">Ver balanço</button><button class="btn btn-primary" data-add-company><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova empresa</button></div>
+          </div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span><strong>Dados fictícios para demonstração.</strong> Os números e cenários não representam uma empresa real. As oportunidades de investimento são hipóteses para análise profissional, não recomendações automáticas.</span></div>
+          <div class="stats">
+            <article class="card stat-card"><div class="stat-top"><span class="stat-label">Caixa disponível</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="6" width="17" height="14" rx="2"/><path d="M7 6V4h10v2M3.5 11h17M15 14h2"/></svg></span></div><div class="stat-value">R$ 820 mil</div><div class="stat-foot"><span>Saldo em bancos (demo)</span></div></article>
+            <article class="card stat-card"><div class="stat-top"><span class="stat-label">Faturamento mensal</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/></svg></span></div><div class="stat-value">R$ 720 mil</div><div class="stat-foot"><span class="positive">↑ 5,2%</span><span>vs. mês anterior (demo)</span></div></article>
+            <article class="card stat-card"><div class="stat-top"><span class="stat-label">Margem EBITDA</span><span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 16 5-5 3.5 3.5L20 7M14.5 7H20v5.5"/></svg></span></div><div class="stat-value">16,1%</div><div class="stat-foot"><span>R$ 116 mil no mês (demo)</span></div></article>
+            <article class="card stat-card"><div class="stat-top"><span class="stat-label">Endividamento total</span><span class="stat-icon" style="background:#fbf2e5;color:#b48036"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 9h8M8 12h8M8 15h8"/></svg></span></div><div class="stat-value">R$ 2,6 mi</div><div class="stat-foot"><span>43,3% do ativo total (demo)</span></div></article>
+          </div>
+          <div class="middle-grid">
+            <article class="card panel">
+              <div class="panel-heading"><div><div class="panel-title">Evolução do caixa</div><div class="panel-caption">Saldo mensal consolidado (ilustrativo)</div></div><div class="range-tabs" aria-label="Período do gráfico"><button data-range="1M">1M</button><button data-range="3M">3M</button><button data-range="6M">6M</button><button class="selected" data-range="1A">1A</button><button data-range="Tudo">Tudo</button></div></div>
+              <div class="chart-summary"><span class="chart-value">R$ 820 mil</span><span class="chart-change">↗ 8,2% no período</span></div>
+              <div class="chart-wrap"><svg viewBox="0 0 700 180" preserveAspectRatio="none" role="img" aria-label="Gráfico demonstrativo de evolução do caixa"><defs><linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#6eae87" stop-opacity=".2"/><stop offset="100%" stop-color="#6eae87" stop-opacity="0"/></linearGradient></defs><line class="chart-grid" x1="42" y1="25" x2="690" y2="25"/><line class="chart-grid" x1="42" y1="67" x2="690" y2="67"/><line class="chart-grid" x1="42" y1="109" x2="690" y2="109"/><line class="chart-grid" x1="42" y1="151" x2="690" y2="151"/><text class="chart-label" x="0" y="28">900 mil</text><text class="chart-label" x="0" y="70">700 mil</text><text class="chart-label" x="0" y="112">500 mil</text><text class="chart-label" x="0" y="154">300 mil</text><path class="chart-area" d="M42 138 C78 133 84 128 112 131 S160 119 188 123 S224 105 252 112 S294 101 320 106 S362 87 390 97 S430 91 458 78 S500 85 526 71 S567 66 594 60 S638 47 666 53 S680 37 690 31 L690 151 L42 151Z"/><path class="chart-line" d="M42 138 C78 133 84 128 112 131 S160 119 188 123 S224 105 252 112 S294 101 320 106 S362 87 390 97 S430 91 458 78 S500 85 526 71 S567 66 594 60 S638 47 666 53 S680 37 690 31"/><text class="chart-label" x="42" y="172">Dez</text><text class="chart-label" x="150" y="172">Fev</text><text class="chart-label" x="258" y="172">Abr</text><text class="chart-label" x="366" y="172">Jun</text><text class="chart-label" x="474" y="172">Ago</text><text class="chart-label" x="582" y="172">Out</text><text class="chart-label" x="661" y="172">Nov</text></svg></div>
+            </article>
+            <article class="card panel">
+              <div class="panel-heading"><div><div class="panel-title">Composição do ativo</div><div class="panel-caption">Balanço patrimonial demonstrativo</div></div><button class="view-all" data-page-link="accounting">Abrir BP →</button></div>
+              <div class="allocation-body"><div class="donut"><div class="donut-center"><strong>R$ 6,0 mi</strong><span>ativo total</span></div></div><div class="legend"><div class="legend-item"><span class="legend-dot" style="background:#286d4b"></span><span class="legend-name">Ativo circulante</span><span class="legend-value">40% · R$ 2,4 mi</span></div><div class="legend-item"><span class="legend-dot" style="background:#7fb696"></span><span class="legend-name">Ativo não circulante</span><span class="legend-value">60% · R$ 3,6 mi</span></div><div class="legend-item"><span class="legend-dot" style="background:#d7ba82"></span><span class="legend-name">Passivos totais</span><span class="legend-value">R$ 2,6 mi</span></div><div class="legend-item"><span class="legend-dot" style="background:#d9e7dc"></span><span class="legend-name">Patrimônio líquido</span><span class="legend-value">R$ 3,4 mi</span></div></div></div>
+            </article>
+          </div>
+          <div class="bottom-grid">
+            <article class="card clients-panel">
+              <div class="panel-heading"><div><div class="panel-title">Empresas acompanhadas</div><div class="panel-caption">Visão resumida dos negócios no workspace</div></div><button class="view-all" data-page-link="companies">Ver todas →</button></div>
+              <table class="client-table"><thead><tr><th>EMPRESA</th><th>FATURAMENTO</th><th>EBITDA</th><th>STATUS</th></tr></thead><tbody id="company-rows"></tbody></table>
+            </article>
+            <article class="card panel">
+              <div class="panel-heading"><div><div class="panel-title">Pontos para análise</div><div class="panel-caption">Hipóteses iniciais para discussão</div></div></div>
+              <div class="recommendations"><div class="recommendation"><span class="recommendation-number">1</span><div><strong>Validar capital de giro</strong><p>Comparar o ciclo de caixa e as obrigações dos próximos meses.</p></div></div><div class="recommendation"><span class="recommendation-number">2</span><div><strong>Revisar endividamento</strong><p>Conferir custo, prazo e garantias das dívidas no balancete.</p></div></div><div class="recommendation"><span class="recommendation-number">3</span><div><strong>Avaliar caixa excedente</strong><p>Simular liquidez e projetos da empresa antes de decidir novos investimentos.</p></div></div></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page-section" id="page-companies">
+          <div class="page-heading"><div><div class="eyebrow">Carteira de consultoria</div><h1>Empresas</h1><div class="subheading">Cadastros e visão inicial dos negócios atendidos.</div></div><button class="btn btn-primary" data-add-company><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova empresa</button></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Empresas demonstrativas; os novos cadastros são salvos no Supabase.</span></div>
+          <article class="card clients-panel"><div class="panel-heading"><div><div class="panel-title">Negócios acompanhados</div><div class="panel-caption"><span id="company-count">5</span> resultados</div></div><button class="btn" data-export>Exportar lista</button></div><table class="client-table"><thead><tr><th>EMPRESA</th><th>SETOR</th><th>FATURAMENTO MENSAL</th><th>EBITDA</th><th>STATUS</th></tr></thead><tbody id="all-company-rows"></tbody></table></article>
+        </section>
+
+        <section class="page-section" id="page-admin-accounts">
+          <div class="page-heading"><div><div class="eyebrow">Administração</div><h1>Contas de clientes</h1><div class="subheading">Consulte as empresas cadastradas e o status de confirmação do e-mail.</div></div></div>
+          <div class="demo-note"><span>Consulta somente. O acesso do cliente é liberado após confirmar o e-mail; esta área não altera nem bloqueia contas.</span></div>
+          <article class="card clients-panel">
+            <div class="panel-heading"><div><div class="panel-title">Clientes cadastrados</div><div class="panel-caption"><span id="admin-account-count">0</span> resultados</div></div><button class="btn" id="refresh-admin-accounts" type="button">Atualizar lista</button></div>
+            <div class="admin-account-controls"><input class="admin-account-search" id="admin-account-search" type="search" placeholder="Buscar por empresa ou e-mail..." aria-label="Buscar contas de clientes"></div>
+            <div class="admin-account-table-wrap"><table class="client-table admin-account-table"><thead><tr><th>EMPRESA</th><th>E-MAIL DA CONTA</th><th>SETOR</th><th>CONFIRMAÇÃO</th><th>CADASTRO</th></tr></thead><tbody id="admin-account-rows"></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="page-section" id="page-accounting">
+          <div class="page-heading"><div><div class="eyebrow">Fechamento demonstrativo · Outubro 2026</div><h1>Contabilidade & balanço</h1><div class="subheading">Base organizada para entender ativos, passivos, resultado e caixa.</div></div><button class="btn" data-toast="A integração para importar balancetes e extratos fará parte das próximas etapas.">Importar balancete</button></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Demonstrativo fictício e simplificado. A escrituração e o balanço oficiais precisam ser preparados e revisados por profissionais habilitados com os documentos de origem.</span></div>
+          <div class="accounting-columns">
+            <article class="card panel"><div class="panel-heading"><div><div class="panel-title">Balanço Patrimonial (BP)</div><div class="panel-caption">Orla Café e Alimentos Ltda. · R$</div></div><span class="company-status">Ativo = Passivo + PL</span></div><table class="statement-table"><thead><tr><th>ATIVOS</th><th>VALOR</th></tr></thead><tbody><tr><td>Caixa e equivalentes</td><td>820.000</td></tr><tr><td>Contas a receber e estoques</td><td>1.580.000</td></tr><tr class="total"><td>Ativo circulante</td><td>2.400.000</td></tr><tr><td>Imobilizado e outros ativos</td><td>3.600.000</td></tr><tr class="total"><td>Ativo total</td><td>6.000.000</td></tr></tbody></table><table class="statement-table"><thead><tr><th>PASSIVOS E PATRIMÔNIO LÍQUIDO</th><th>VALOR</th></tr></thead><tbody><tr><td>Passivo circulante</td><td>1.150.000</td></tr><tr><td>Passivo não circulante</td><td>1.450.000</td></tr><tr><td>Patrimônio líquido</td><td>3.400.000</td></tr><tr class="total"><td>Total passivo + PL</td><td>6.000.000</td></tr></tbody></table><div class="section-note">Estrutura resumida para demonstração; sem plano de contas ou lançamentos contábeis reais.</div></article>
+            <article class="card panel"><div class="panel-heading"><div><div class="panel-title">DRE simplificada</div><div class="panel-caption">Acumulado demonstrativo · R$</div></div></div><table class="statement-table"><thead><tr><th>DEMONSTRAÇÃO DO RESULTADO</th><th>VALOR</th></tr></thead><tbody><tr><td>Receita líquida</td><td>8.400.000</td></tr><tr><td>(−) Custos</td><td>(4.700.000)</td></tr><tr class="total"><td>Lucro bruto</td><td>3.700.000</td></tr><tr><td>(−) Despesas operacionais</td><td>(2.350.000)</td></tr><tr class="total"><td>EBITDA</td><td>1.350.000</td></tr><tr><td>(−) Depreciação e resultado financeiro</td><td>(430.000)</td></tr><tr><td>(−) Tributos estimados</td><td>(240.000)</td></tr><tr class="total"><td>Lucro líquido estimado</td><td>680.000</td></tr></tbody></table><div class="recommendations"><div class="recommendation"><span class="recommendation-number">i</span><div><strong>Liquidez corrente: 2,09</strong><p>Ativo circulante dividido pelo passivo circulante, com base nos números fictícios acima.</p></div></div><div class="recommendation"><span class="recommendation-number">i</span><div><strong>Conferência necessária</strong><p>Concilie saldos bancários, contas a pagar/receber, estoque, imobilizado e impostos.</p></div></div></div></article>
+          </div>
+        </section>
+
+        <section class="page-section" id="page-investments">
+          <div class="page-heading"><div><div class="eyebrow">Planejamento financeiro</div><h1>Investimentos da empresa</h1><div class="subheading">Simule alternativas para o caixa e para o crescimento do negócio.</div></div><button class="btn" data-toast="O cenário está pronto para ser revisado junto ao consultor.">Preparar cenário</button></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span><strong>Simulação ilustrativa, não recomendação.</strong> Antes de investir, confirmar obrigações, capital de giro, dívidas, prazo, liquidez, tributação e objetivos da empresa com os responsáveis.</span></div>
+          <div class="stats"><article class="card stat-card"><div class="stat-label">Caixa informado (demo)</div><div class="stat-value">R$ 820 mil</div><div class="stat-foot">Saldo bancário ilustrativo</div></article><article class="card stat-card"><div class="stat-label">Reserva operacional simulada</div><div class="stat-value">R$ 600 mil</div><div class="stat-foot">Hipótese de 3 meses de despesas essenciais</div></article><article class="card stat-card"><div class="stat-label">Excedente potencial a analisar</div><div class="stat-value">R$ 220 mil</div><div class="stat-foot">Somente após validar caixa e compromissos</div></article><article class="card stat-card"><div class="stat-label">Dívidas a revisar</div><div class="stat-value">R$ 2,6 mi</div><div class="stat-foot">Compare custo da dívida e retorno esperado</div></article><article class="card stat-card"><div class="stat-label">Dívida líquida / EBITDA (demo)</div><div class="stat-value">1,32x</div><div class="stat-foot">(R$ 2,6 mi − R$ 0,82 mi) ÷ R$ 1,35 mi</div></article></div>
+          <article class="card panel"><div class="panel-heading"><div><div class="panel-title">Cenário de uso do excedente</div><div class="panel-caption">Alternativas para discussão com a gestão — não executar automaticamente</div></div><span class="company-status">Simulação · R$ 220 mil</span></div><div class="recommendations"><div class="recommendation"><span class="recommendation-number">1</span><div><strong>R$ 88 mil · Liquidez e proteção de caixa (40%)</strong><p>Avaliar alternativas de baixo risco e resgate compatível com o calendário de pagamentos e a política financeira da empresa.</p></div></div><div class="recommendation"><span class="recommendation-number">2</span><div><strong>R$ 77 mil · Equipamentos e eficiência (35%)</strong><p>Comparar retorno operacional, custo total, prazo de implantação e necessidade de financiamento do projeto.</p></div></div><div class="recommendation"><span class="recommendation-number">3</span><div><strong>R$ 55 mil · Tecnologia e vendas (25%)</strong><p>Estimar ganhos de produtividade e receita, com metas, responsáveis e acompanhamento do fluxo de caixa.</p></div></div></div><div class="section-note">Percentuais e valores são apenas um exemplo de cenário. A decisão final depende do diagnóstico completo, documentação, validação contábil e aprovação dos responsáveis pela empresa.</div></article>
+        </section>
+
+        <section class="page-section" id="page-economy">
+          <div class="page-heading"><div><div class="eyebrow">Contexto externo</div><h1>Economia</h1><div class="subheading">Indicadores que podem afetar custos, crédito, preços e decisões da empresa.</div></div><button class="btn" data-toast="Na versão de produção, esta área deverá usar fontes oficiais e exibir a data de atualização.">Atualizar indicadores</button></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Indicadores fictícios para demonstrar a tela. Não são cotações atuais nem dados conectados a fontes econômicas.</span></div>
+          <div class="economic-grid"><article class="card economic-card"><span>Selic anual · exemplo</span><strong>14,75%</strong><small>Custo de oportunidade e crédito</small></article><article class="card economic-card"><span>IPCA 12 meses · exemplo</span><strong>4,8%</strong><small>Pressão sobre custos e preços</small></article><article class="card economic-card"><span>Dólar · exemplo</span><strong>R$ 5,40</strong><small>Impacto em itens importados</small></article><article class="card economic-card"><span>PIB · projeção ilustrativa</span><strong>2,1%</strong><small>Cenário de atividade econômica</small></article></div>
+          <article class="card panel" style="margin-top:16px"><div class="panel-title">Como conectar o cenário ao negócio</div><div class="recommendations"><div class="recommendation"><span class="recommendation-number">1</span><div><strong>Mapear exposição</strong><p>Identificar custos indexados, insumos importados, contratos e dívidas pós-fixadas.</p></div></div><div class="recommendation"><span class="recommendation-number">2</span><div><strong>Simular cenários</strong><p>Testar efeitos em margem, capital de giro, capacidade de pagamento e orçamento.</p></div></div><div class="recommendation"><span class="recommendation-number">3</span><div><strong>Revisar periodicamente</strong><p>Registrar fonte, data e premissas dos indicadores usados em cada análise.</p></div></div></div></article>
+        </section>
+
+        <section class="page-section" id="page-reports">
+          <div class="page-heading"><div><div class="eyebrow">Análises e acompanhamento</div><h1>Relatórios</h1><div class="subheading">Organize diagnósticos financeiros e materiais de reunião.</div></div></div>
+          <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Relatórios demonstrativos. Para uso profissional, incluir origem, competência, responsável, validações e trilha de auditoria.</span></div>
+          <div class="section-grid"><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3.5h8l4.5 4.7v12.3H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v5h4.5M8 13h8M8 16.5h6"/></svg></div><h3>Cadastro de empresas</h3><p>Lista demonstrativa das empresas acompanhadas e dados básicos de faturamento.</p><button class="btn" data-export>Baixar CSV</button></article><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/></svg></div><h3>Diagnóstico financeiro</h3><p>Consulte o balanço, a DRE simplificada e o cenário de investimentos demonstrativo.</p><button class="btn" data-page-link="accounting">Ver balanço</button></article></div>
+        </section>
+        <section class="page-section" id="page-client">
+          <div class="page-heading"><div><div class="eyebrow">Área da empresa</div><h1>Minha empresa</h1><div class="subheading">Acompanhe o cadastro e os próximos passos da consultoria.</div></div><button class="btn btn-primary" data-page-link="financial-analysis">Abrir diagnóstico financeiro</button></div>
+          <div class="demo-note"><span>Seu acesso é restrito à empresa vinculada. No diagnóstico, informe os dados mensais e a previsão de caixa para análise conjunta com a consultoria.</span></div>
+          <article class="card panel client-company-card">
+            <div class="panel-heading"><div><div class="panel-title">Dados da empresa</div><div class="panel-caption">Informações cadastradas na criação da conta</div></div><span class="company-status" id="client-company-status">Carregando</span></div>
+            <h2 class="client-company-name" id="client-company-name">Carregando...</h2>
+            <p class="client-company-sector" id="client-company-sector"></p>
+          </article>
+          <article class="card panel client-next-steps">
+            <div class="panel-title">Próximos passos</div>
+            <p>Preencha os dados mensais e a previsão de caixa no diagnóstico financeiro; a consultoria poderá validar as informações em conjunto com você.</p>
+          </article>
+        </section>
+        <section class="page-section" id="page-financial-analysis">
+          <div class="page-heading financial-page-heading">
+            <div><div class="eyebrow">Análise financeira</div><h1>Diagnóstico da empresa</h1><div class="subheading" id="financial-period-caption">Importe os dados mensais para calcular os indicadores.</div><span class="demo-mode-chip" id="financial-data-mode" hidden>Demonstração fictícia</span></div>
+            <div class="heading-actions"><button class="btn" id="client-home-link" type="button" hidden>Minha empresa</button><button class="btn" id="refresh-financial-analysis" type="button">Atualizar análise</button></div>
+          </div>
+          <div class="demo-note"><span>PMR = contas a receber ÷ receita × dias do mês; PME = estoque ÷ CMV × dias; PMP = fornecedores ÷ compras × dias. O ciclo financeiro é PMR + PME − PMP e a necessidade de capital de giro é contas a receber + estoque − fornecedores. EBITDA é receita − CMV − despesas variáveis − despesas fixas. A dívida líquida/EBITDA usa os últimos 12 meses completos. A liquidez do score é simplificada (não inclui todos os passivos circulantes); cenários e benchmark são apenas ilustrativos. Valide os dados e critérios contábeis antes de usar.</span></div>
+          <div class="financial-company-controls">
+            <label class="form-field" id="financial-company-field" for="financial-company-select"><span>Empresa</span><select id="financial-company-select"></select></label>
+          </div>
+          <div class="financial-demo-notice" id="financial-demo-notice" role="status" hidden>Modo demonstração: valores fictícios da Orla, derivados dos números exibidos na Visão geral e na DRE. São gerados somente neste navegador, não são gravados no Supabase e os imports ficam desativados. Selecione outra empresa para carregar dados reais.</div>
+          <div class="financial-alerts" id="financial-alerts" aria-live="polite"></div>
+          <article class="card panel analysis-panel health-panel">
+            <div class="panel-heading"><div><div class="panel-title">Saúde financeira</div><div class="panel-caption">Score indicativo de 0 a 100: média dos pilares disponíveis, com semáforo por indicador.</div></div></div>
+            <div class="health-content">
+              <div class="health-score"><strong id="health-score">—</strong><span>score</span><small id="health-score-caption">Aguardando dados</small></div>
+              <div class="health-pillars" id="health-pillars"></div>
+            </div>
+          </article>
+          <div class="stats analysis-stats">
+            <article class="card stat-card"><div class="stat-label">PMR</div><div class="stat-value" id="metric-pmr">—</div><div class="stat-foot">Prazo médio de recebimento</div></article>
+            <article class="card stat-card"><div class="stat-label">PME</div><div class="stat-value" id="metric-pme">—</div><div class="stat-foot">Prazo médio de estoque</div></article>
+            <article class="card stat-card"><div class="stat-label">PMP</div><div class="stat-value" id="metric-pmp">—</div><div class="stat-foot">Prazo médio de pagamento</div></article>
+            <article class="card stat-card"><div class="stat-label">Ciclo financeiro</div><div class="stat-value" id="metric-cash-cycle">—</div><div class="stat-foot">PMR + PME − PMP</div></article>
+            <article class="card stat-card"><div class="stat-label">Necessidade de capital de giro</div><div class="stat-value" id="metric-working-capital">—</div><div class="stat-foot">Contas a receber + estoque − fornecedores</div></article>
+            <article class="card stat-card"><div class="stat-label">Dívida líquida / EBITDA</div><div class="stat-value" id="metric-net-debt-ebitda">—</div><div class="stat-foot">Dívida líquida dividida pelo EBITDA LTM</div></article>
+            <article class="card stat-card"><div class="stat-label">Ponto de equilíbrio mensal</div><div class="stat-value" id="metric-break-even">—</div><div class="stat-foot">Custos fixos ÷ margem de contribuição</div></article>
+          </div>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">DRE em cascata</div><div class="panel-caption">Receita, custos, despesas, EBITDA e lucro líquido estimado.</div></div><span class="company-status" id="ebitda-benchmark">Benchmark setorial fictício · EBITDA mediana 12%</span></div>
+            <div class="waterfall-chart" id="dre-waterfall" role="img" aria-label="Gráfico em cascata da demonstração do resultado"></div>
+            <div class="benchmark-note" id="dre-waterfall-note"></div>
+            <div class="benchmark-note" id="benchmark-note">Benchmark fictício para demonstração; não representa dados setoriais validados.</div>
+          </article>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">DRE — análise horizontal e vertical</div><div class="panel-caption">Comparação mensal; custos e despesas aparecem como valores negativos.</div></div></div>
+            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>CONTA</th><th id="dre-current-period">MÊS ATUAL</th><th>% DA RECEITA</th><th>VARIAÇÃO VS. ANTERIOR</th></tr></thead><tbody id="dre-analysis-rows"></tbody></table></div>
+          </article>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">Fluxo de caixa projetado · 12 meses</div><div class="panel-caption">Cenários derivados da previsão base: otimista ±10% nas entradas/saídas e estresse inverso.</div></div></div>
+            <div class="forecast-legend"><span><i class="base"></i>Base</span><span><i class="optimistic"></i>Otimista</span><span><i class="stress"></i>Estresse</span></div>
+            <div class="forecast-chart" id="cash-forecast-chart" role="img" aria-label="Gráfico de cenários de caixa para os próximos 12 meses"></div>
+            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>MÊS</th><th>SALDO INICIAL</th><th>ENTRADAS</th><th>SAÍDAS</th><th>BASE</th><th>OTIMISTA</th><th>ESTRESSE</th></tr></thead><tbody id="cash-forecast-rows"></tbody></table></div>
+          </article>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">Vencimentos de dívidas · próximos 12 meses</div><div class="panel-caption">Parcelas informadas pela empresa; o saldo de dívida não permite inferir vencimentos.</div></div></div>
+            <div class="debt-maturity-chart" id="debt-maturity-chart" role="img" aria-label="Cronograma mensal de vencimentos de dívidas"></div>
+          </article>
+          <div class="section-grid financial-import-grid">
+            <article class="card panel">
+              <div class="panel-title">Importar dados mensais</div>
+              <p class="panel-caption">Uma linha por mês. Inclua receita, custos, saldos, dívida e caixa de fechamento. Depreciação, resultado financeiro e impostos são opcionais.</p>
+              <div class="upload-actions"><button class="btn" id="download-financial-template" type="button">Baixar modelo CSV</button><label class="btn" for="financial-csv-file">Selecionar CSV</label><input id="financial-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-financial-csv" type="button" disabled>Importar dados</button></div>
+              <p class="upload-file-name" id="financial-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">Use os cabeçalhos do modelo; valores numéricos podem usar vírgula decimal. Datas no formato AAAA-MM.</p>
+            </article>
+            <article class="card panel">
+              <div class="panel-title">Importar previsão de caixa</div>
+              <p class="panel-caption">Informe entradas e saídas previstas para até 12 meses após o último período realizado. É possível importar em períodos contínuos menores.</p>
+              <div class="upload-actions"><button class="btn" id="download-forecast-template" type="button">Baixar modelo de previsão</button><label class="btn" for="forecast-csv-file">Selecionar CSV</label><input id="forecast-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-forecast-csv" type="button" disabled>Importar previsão</button></div>
+              <p class="upload-file-name" id="forecast-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">O saldo inicial é o caixa do último mês realizado. Os cenários otimista e de estresse aplicam uma variação de 10% às entradas e saídas base; são simulações, não previsões garantidas.</p>
+            </article>
+            <article class="card panel">
+              <div class="panel-title">Importar vencimentos de dívidas</div>
+              <p class="panel-caption">Uma linha por mês com o total de principal que vence; os meses duplicados são somados.</p>
+              <div class="upload-actions"><button class="btn" id="download-debt-template" type="button">Baixar modelo de vencimentos</button><label class="btn" for="debt-csv-file">Selecionar CSV</label><input id="debt-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-debt-csv" type="button" disabled>Importar vencimentos</button></div>
+              <p class="upload-file-name" id="debt-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">Use datas AAAA-MM e informe vencimentos previstos, não o saldo total da dívida.</p>
+            </article>
+          </div>
+        </section>
+        <div class="disclaimer">Vértice é um protótipo demonstrativo. Dados reais exigem armazenamento seguro, validação contábil, consentimentos e revisão regulatória aplicável.</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="company-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal"><div class="modal-top"><div><h2 id="modal-title">Adicionar empresa</h2><div class="modal-subtitle">Cadastre uma empresa para iniciar o diagnóstico financeiro.</div></div><button class="close-modal" id="close-modal" aria-label="Fechar">×</button></div>
+      <form id="company-form"><div class="form-grid"><div class="form-field"><label for="company-name-input">Razão social ou nome</label><input id="company-name-input" name="name" required autocomplete="organization" placeholder="Ex.: Empresa Exemplo Ltda."></div><div class="form-field"><label for="company-sector-input">Setor de atuação</label><select id="company-sector-input" name="sector"><option>Comércio</option><option>Indústria</option><option>Serviços</option><option>Tecnologia</option><option>Saúde</option><option>Logística</option><option>Outro</option></select></div><div class="form-field"><label for="company-revenue-input">Faturamento mensal aproximado (R$)</label><input id="company-revenue-input" name="revenue" type="number" min="0" step="1000" required placeholder="Ex.: 250000"></div></div><div class="form-actions"><button class="btn" type="button" id="cancel-modal">Cancelar</button><button class="btn btn-primary" type="submit">Adicionar empresa</button></div></form>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

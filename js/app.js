@@ -3,6 +3,7 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const authHashParams = new URLSearchParams(window.location.hash.slice(1));
 const authQueryParams = new URLSearchParams(window.location.search);
+const signupRequested = authQueryParams.get("cadastro") === "1";
 const authCallbackType = authHashParams.get("type") || authQueryParams.get("type");
 let invitationFlow =
   ["invite", "recovery"].includes(authCallbackType) ||
@@ -15,6 +16,7 @@ let authCallbackError =
   authQueryParams.has("error_code");
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const getAuthRedirectUrl = () => new URL("./", window.location.href).href;
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const toast = $("#toast");
@@ -1150,8 +1152,8 @@ async function handleSession(session) {
     appShell.classList.remove("client-mode");
     $("#client-home-link").hidden = true;
     authScreen.hidden = false;
-    loginForm.hidden = invitationFlow || passwordRecoveryFlow;
-    signupForm.hidden = true;
+    loginForm.hidden = invitationFlow || passwordRecoveryFlow || signupRequested;
+    signupForm.hidden = invitationFlow || passwordRecoveryFlow || !signupRequested;
     passwordSetupForm.hidden = true;
     if (passwordRecoveryFlow) {
       showAuthMessage("Este link de recuperação expirou ou não é válido. Solicite um novo link.");
@@ -1390,7 +1392,7 @@ signupForm.addEventListener("submit", async event => {
     email,
     password,
     options: {
-      emailRedirectTo: new URL(window.location.pathname, window.location.origin).href,
+      emailRedirectTo: getAuthRedirectUrl(),
       data: {
         vertice_signup: true,
         company_name: companyName,
@@ -1436,7 +1438,7 @@ $("#forgot-password").addEventListener("click", async event => {
   const button = $("#forgot-password");
   button.disabled = true;
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: new URL(window.location.pathname, window.location.origin).href
+    redirectTo: getAuthRedirectUrl()
   });
   button.disabled = false;
 

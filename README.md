@@ -1,10 +1,12 @@
 # Vértice — Consultoria empresarial
 
-Aplicação estática para consultoria financeira empresarial, hospedada no GitHub Pages e conectada ao Supabase para autenticação, cadastro de empresas e diagnóstico financeiro.
+Site público e aplicação estática para consultoria financeira empresarial, hospedados no GitHub Pages e conectados ao Supabase para autenticação, cadastro de empresas e diagnóstico financeiro.
 
 ## Arquivos
 
-- `index.html` — telas da aplicação
+- `index.html` — landing page pública e encaminhamento de callbacks de autenticação
+- `app.html` — portal autenticado, cadastro e diagnóstico financeiro
+- `css/landing.css` — estilos da landing page
 - `css/style.css` — estilos responsivos
 - `js/app.js` — autenticação, navegação e operações de empresas
 - `js/config.js` — URL e chave pública do Supabase
@@ -14,11 +16,13 @@ Aplicação estática para consultoria financeira empresarial, hospedada no GitH
 
 1. Execute as migrations da pasta `supabase/migrations/` no SQL Editor do projeto.
 2. Cadastre o e-mail do administrador em `public.vertice_admin_allowlist` pelo SQL Editor.
-3. Configure a URL do GitHub Pages como Site URL e Redirect URL em Auth → URL Configuration.
-4. Convide o administrador em Authentication → Users. O trigger atribui o perfil `admin` ao e-mail autorizado; o link leva ao app para definir a senha.
+3. Configure a URL raiz do GitHub Pages como Site URL e Redirect URL em Auth → URL Configuration. Os links de confirmação e recuperação retornam à raiz; a landing encaminha os callbacks ao `app.html`, preservando parâmetros e tokens.
+4. Convide o administrador em Authentication → Users. O trigger atribui o perfil `admin` ao e-mail autorizado; o link leva ao portal para definir a senha.
 5. Se o usuário já estiver na tela de login, use **Esqueci minha senha** para receber um link de recuperação e criar a senha.
 6. Para permitir contas de clientes, habilite inscrições por e-mail e confirmação de e-mail em Auth → Providers → Email. As migrations criam a empresa do cliente após a confirmação e limitam o acesso aos dados associados à conta.
 7. Administradores podem consultar a lista de contas de clientes, empresas informadas e situação da confirmação do e-mail na seção **Contas**. Essa seção não altera nem bloqueia acessos.
+
+A página inicial (`/vertice-consultoria/`) é pública. Os botões **Entrar** e **Começar** levam ao portal (`app.html`); o segundo abre o cadastro da empresa. O portal pode ser acessado diretamente pelo endereço `app.html`.
 
 `js/config.js` contém somente a chave pública `publishable`, apropriada para o navegador. Nunca coloque uma chave `service_role` ou outra chave secreta no repositório. O acesso aos dados é protegido por RLS no banco.
 
