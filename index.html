@@ -172,10 +172,18 @@
             <div><div class="eyebrow">Análise financeira</div><h1>Diagnóstico da empresa</h1><div class="subheading" id="financial-period-caption">Importe os dados mensais para calcular os indicadores.</div></div>
             <div class="heading-actions"><button class="btn" id="client-home-link" type="button" hidden>Minha empresa</button><button class="btn" id="refresh-financial-analysis" type="button">Atualizar análise</button></div>
           </div>
-          <div class="demo-note"><span>PMR = contas a receber ÷ receita × dias do mês; PME = estoque ÷ CMV × dias; PMP = fornecedores ÷ compras × dias. O ciclo financeiro é PMR + PME − PMP e a necessidade de capital de giro é contas a receber + estoque − fornecedores. EBITDA é receita − CMV − despesas variáveis − despesas fixas. A dívida líquida/EBITDA usa os últimos 12 meses completos. São estimativas com saldos de fechamento; valide critérios contábeis antes de usar.</span></div>
+          <div class="demo-note"><span>PMR = contas a receber ÷ receita × dias do mês; PME = estoque ÷ CMV × dias; PMP = fornecedores ÷ compras × dias. O ciclo financeiro é PMR + PME − PMP e a necessidade de capital de giro é contas a receber + estoque − fornecedores. EBITDA é receita − CMV − despesas variáveis − despesas fixas. A dívida líquida/EBITDA usa os últimos 12 meses completos. A liquidez do score é simplificada (não inclui todos os passivos circulantes); cenários e benchmark são apenas ilustrativos. Valide os dados e critérios contábeis antes de usar.</span></div>
           <div class="financial-company-controls">
             <label class="form-field" id="financial-company-field" for="financial-company-select"><span>Empresa</span><select id="financial-company-select"></select></label>
           </div>
+          <div class="financial-alerts" id="financial-alerts" aria-live="polite"></div>
+          <article class="card panel analysis-panel health-panel">
+            <div class="panel-heading"><div><div class="panel-title">Saúde financeira</div><div class="panel-caption">Score indicativo de 0 a 100: média dos pilares disponíveis, com semáforo por indicador.</div></div></div>
+            <div class="health-content">
+              <div class="health-score"><strong id="health-score">—</strong><span>score</span><small id="health-score-caption">Aguardando dados</small></div>
+              <div class="health-pillars" id="health-pillars"></div>
+            </div>
+          </article>
           <div class="stats analysis-stats">
             <article class="card stat-card"><div class="stat-label">PMR</div><div class="stat-value" id="metric-pmr">—</div><div class="stat-foot">Prazo médio de recebimento</div></article>
             <article class="card stat-card"><div class="stat-label">PME</div><div class="stat-value" id="metric-pme">—</div><div class="stat-foot">Prazo médio de estoque</div></article>
@@ -186,27 +194,46 @@
             <article class="card stat-card"><div class="stat-label">Ponto de equilíbrio mensal</div><div class="stat-value" id="metric-break-even">—</div><div class="stat-foot">Custos fixos ÷ margem de contribuição</div></article>
           </div>
           <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">DRE em cascata</div><div class="panel-caption">Receita, custos, despesas, EBITDA e lucro líquido estimado.</div></div><span class="company-status" id="ebitda-benchmark">Benchmark setorial fictício · EBITDA mediana 12%</span></div>
+            <div class="waterfall-chart" id="dre-waterfall" role="img" aria-label="Gráfico em cascata da demonstração do resultado"></div>
+            <div class="benchmark-note" id="dre-waterfall-note"></div>
+            <div class="benchmark-note" id="benchmark-note">Benchmark fictício para demonstração; não representa dados setoriais validados.</div>
+          </article>
+          <article class="card panel analysis-panel">
             <div class="panel-heading"><div><div class="panel-title">DRE — análise horizontal e vertical</div><div class="panel-caption">Comparação mensal; custos e despesas aparecem como valores negativos.</div></div></div>
             <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>CONTA</th><th id="dre-current-period">MÊS ATUAL</th><th>% DA RECEITA</th><th>VARIAÇÃO VS. ANTERIOR</th></tr></thead><tbody id="dre-analysis-rows"></tbody></table></div>
           </article>
           <article class="card panel analysis-panel">
-            <div class="panel-heading"><div><div class="panel-title">Fluxo de caixa projetado</div><div class="panel-caption">Saldo inicial + entradas previstas − saídas previstas, pelos próximos 6 meses.</div></div></div>
-            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>MÊS</th><th>SALDO INICIAL</th><th>ENTRADAS</th><th>SAÍDAS</th><th>SALDO PROJETADO</th></tr></thead><tbody id="cash-forecast-rows"></tbody></table></div>
+            <div class="panel-heading"><div><div class="panel-title">Fluxo de caixa projetado · 12 meses</div><div class="panel-caption">Cenários derivados da previsão base: otimista ±10% nas entradas/saídas e estresse inverso.</div></div></div>
+            <div class="forecast-legend"><span><i class="base"></i>Base</span><span><i class="optimistic"></i>Otimista</span><span><i class="stress"></i>Estresse</span></div>
+            <div class="forecast-chart" id="cash-forecast-chart" role="img" aria-label="Gráfico de cenários de caixa para os próximos 12 meses"></div>
+            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>MÊS</th><th>SALDO INICIAL</th><th>ENTRADAS</th><th>SAÍDAS</th><th>BASE</th><th>OTIMISTA</th><th>ESTRESSE</th></tr></thead><tbody id="cash-forecast-rows"></tbody></table></div>
+          </article>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">Vencimentos de dívidas · próximos 12 meses</div><div class="panel-caption">Parcelas informadas pela empresa; o saldo de dívida não permite inferir vencimentos.</div></div></div>
+            <div class="debt-maturity-chart" id="debt-maturity-chart" role="img" aria-label="Cronograma mensal de vencimentos de dívidas"></div>
           </article>
           <div class="section-grid financial-import-grid">
             <article class="card panel">
               <div class="panel-title">Importar dados mensais</div>
-              <p class="panel-caption">Uma linha por mês. Inclua receita, custos, saldos, dívida e caixa de fechamento.</p>
+              <p class="panel-caption">Uma linha por mês. Inclua receita, custos, saldos, dívida e caixa de fechamento. Depreciação, resultado financeiro e impostos são opcionais.</p>
               <div class="upload-actions"><button class="btn" id="download-financial-template" type="button">Baixar modelo CSV</button><label class="btn" for="financial-csv-file">Selecionar CSV</label><input id="financial-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-financial-csv" type="button" disabled>Importar dados</button></div>
               <p class="upload-file-name" id="financial-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
               <p class="section-note">Use os cabeçalhos do modelo; valores numéricos podem usar vírgula decimal. Datas no formato AAAA-MM.</p>
             </article>
             <article class="card panel">
               <div class="panel-title">Importar previsão de caixa</div>
-              <p class="panel-caption">Informe entradas e saídas previstas para os 6 meses após o último período realizado.</p>
+              <p class="panel-caption">Informe entradas e saídas previstas para até 12 meses após o último período realizado. É possível importar em períodos contínuos menores.</p>
               <div class="upload-actions"><button class="btn" id="download-forecast-template" type="button">Baixar modelo de previsão</button><label class="btn" for="forecast-csv-file">Selecionar CSV</label><input id="forecast-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-forecast-csv" type="button" disabled>Importar previsão</button></div>
               <p class="upload-file-name" id="forecast-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
-              <p class="section-note">O saldo inicial da projeção é o caixa do último mês realizado; o saldo projetado de cada mês é levado ao seguinte.</p>
+              <p class="section-note">O saldo inicial é o caixa do último mês realizado. Os cenários otimista e de estresse aplicam uma variação de 10% às entradas e saídas base; são simulações, não previsões garantidas.</p>
+            </article>
+            <article class="card panel">
+              <div class="panel-title">Importar vencimentos de dívidas</div>
+              <p class="panel-caption">Uma linha por mês com o total de principal que vence; os meses duplicados são somados.</p>
+              <div class="upload-actions"><button class="btn" id="download-debt-template" type="button">Baixar modelo de vencimentos</button><label class="btn" for="debt-csv-file">Selecionar CSV</label><input id="debt-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-debt-csv" type="button" disabled>Importar vencimentos</button></div>
+              <p class="upload-file-name" id="debt-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">Use datas AAAA-MM e informe vencimentos previstos, não o saldo total da dívida.</p>
             </article>
           </div>
         </section>

@@ -34,6 +34,7 @@ let companies = [];
 let adminAccounts = [];
 let financialPeriods = [];
 let cashForecasts = [];
+let debtMaturities = [];
 let activeFinancialCompanyId = null;
 let toastTimer;
 let sessionRequest = 0;
@@ -195,6 +196,10 @@ function parseAmount(value, label, rowNumber) {
   return amount;
 }
 
+function parseOptionalAmount(value, label, rowNumber) {
+  return value.trim() ? parseAmount(value, label, rowNumber) : null;
+}
+
 function parseFinancialCsv(text, forecast = false) {
   const rows = parseCsv(text);
   const headers = rows[0].map((header, index) =>
@@ -236,7 +241,10 @@ function parseFinancialCsv(text, forecast = false) {
       inventory: parseAmount(getValue("estoque"), "estoque", rowNumber),
       supplier_payables: parseAmount(getValue("fornecedores"), "fornecedores", rowNumber),
       gross_debt: parseAmount(getValue("divida_bruta"), "divida_bruta", rowNumber),
-      cash_balance: parseAmount(getValue("caixa"), "caixa", rowNumber)
+      cash_balance: parseAmount(getValue("caixa"), "caixa", rowNumber),
+      depreciation_expenses: parseOptionalAmount(getValue("depreciacao"), "depreciacao", rowNumber),
+      financial_expenses: parseOptionalAmount(getValue("despesas_financeiras"), "despesas_financeiras", rowNumber),
+      tax_expenses: parseOptionalAmount(getValue("impostos"), "impostos", rowNumber)
     };
   });
 }
@@ -330,7 +338,7 @@ function downloadCsv(filename, rows) {
 
 function downloadFinancialTemplate() {
   downloadCsv("vertice-dados-mensais.csv", [
-    ["periodo", "receita", "cmv", "compras", "despesas_variaveis", "despesas_fixas", "contas_a_receber", "estoque", "fornecedores", "divida_bruta", "caixa"]
+    ["periodo", "receita", "cmv", "compras", "despesas_variaveis", "despesas_fixas", "contas_a_receber", "estoque", "fornecedores", "divida_bruta", "caixa", "depreciacao", "despesas_financeiras", "impostos"]
   ]);
 }
 
@@ -341,10 +349,23 @@ function downloadForecastTemplate() {
     return;
   }
   const rows = [["periodo", "entradas_previstas", "saidas_previstas"]];
-  for (let month = 1; month <= 6; month += 1) {
+  for (let month = 1; month <= 12; month += 1) {
     rows.push([monthOffset(latest.period_start, month).slice(0, 7), "", ""]);
   }
   downloadCsv("vertice-previsao-caixa.csv", rows);
+}
+
+function downloadDebtTemplate() {
+  const latest = financialPeriods[financialPeriods.length - 1];
+  if (!latest) {
+    showToast("Importe primeiro ao menos um período realizado.");
+    return;
+  }
+  const rows = [["periodo", "valor_vencimento"]];
+  for (let month = 1; month <= 12; month += 1) {
+    rows.push([monthOffset(latest.period_start, month).slice(0, 7), ""]);
+  }
+  downloadCsv("vertice-vencimentos-divida.csv", rows);
 }
 
 function calculateEbitda(period) {
@@ -352,6 +373,37 @@ function calculateEbitda(period) {
     - Number(period.cost_of_goods_sold)
     - Number(period.variable_expenses)
     - Number(period.fixed_expenses);
+}
+
+function calculateNetIncome(period) {
+  if ([period.depreciation_expenses, period.financial_expenses, period.tax_expenses].some(value => value == null)) {
+    return null;
+  }
+  return calculateEbitda(period)
+    - Number(period.depreciation_expenses)
+    - Number(period.financial_expenses)
+    - Number(period.tax_expenses);
+}
+
+function parseDebtMaturityCsv(text) {
+  const rows = parseCsv(text);
+  const headers = rows[0].map(header =>
+    header.trim().replace(/^\uFEFF/, "").toLocaleLowerCase("pt-BR")
+  );
+  const indexes = new Map(headers.map((header, index) => [header, index]));
+  const required = ["periodo", "valor_vencimento"];
+  const missing = required.filter(column => !indexes.has(column));
+  if (missing.length) {
+    throw new Error(`Cabeçalho ausente: ${missing.join(", ")}. Baixe o modelo para conferir os nomes.`);
+  }
+  const monthlyAmounts = new Map();
+  rows.slice(1).forEach((cells, index) => {
+    const rowNumber = index + 2;
+    const period = parsePeriod(cells[indexes.get("periodo")] || "", rowNumber).slice(0, 7) + "-01";
+    const amount = parseOptionalAmount(cells[indexes.get("valor_vencimento")] || "", "valor_vencimento", rowNumber) || 0;
+    monthlyAmounts.set(period, (monthlyAmounts.get(period) || 0) + amount);
+  });
+  return [...monthlyAmounts].map(([period_start, scheduled_amount]) => ({ period_start, scheduled_amount }));
 }
 
 function renderDreAnalysis(latest, previous) {
@@ -370,46 +422,275 @@ function renderDreAnalysis(latest, previous) {
       { label: "Lucro bruto", amount: grossProfit },
       { label: "(−) Despesas variáveis", amount: -Number(period.variable_expenses) },
       { label: "(−) Despesas fixas", amount: -Number(period.fixed_expenses) },
-      { label: "EBITDA", amount: calculateEbitda(period) }
+      { label: "EBITDA", amount: calculateEbitda(period) },
+      { label: "(−) Depreciação", amount: period.depreciation_expenses == null ? null : -Number(period.depreciation_expenses) },
+      { label: "(−) Despesas financeiras", amount: period.financial_expenses == null ? null : -Number(period.financial_expenses) },
+      { label: "(−) Impostos", amount: period.tax_expenses == null ? null : -Number(period.tax_expenses) },
+      { label: "Lucro líquido estimado", amount: calculateNetIncome(period) }
     ];
   };
   const currentLines = linesFor(latest);
   const previousLines = previous ? linesFor(previous) : [];
   $("#dre-current-period").textContent = formatPeriod(latest.period_start).toLocaleUpperCase("pt-BR");
   rows.innerHTML = currentLines.map((line, index) => {
-    const vertical = latest.revenue > 0 ? formatPercent(line.amount / latest.revenue * 100) : "—";
+    const vertical = latest.revenue > 0 && line.amount != null ? formatPercent(line.amount / latest.revenue * 100) : "—";
     const priorAmount = previousLines[index]?.amount;
-    const change = priorAmount == null ? null : line.amount - priorAmount;
+    const change = priorAmount == null || line.amount == null ? null : line.amount - priorAmount;
     const changePercent = priorAmount == null || priorAmount === 0 ? null : change / Math.abs(priorAmount) * 100;
     const horizontal = change == null
       ? "—"
       : `${formatCurrency(change)}${changePercent == null ? "" : ` (${changePercent > 0 ? "+" : ""}${formatPercent(changePercent)})`}`;
-    return `<tr${index === 2 || index === 5 ? ' class="total"' : ""}><td>${line.label}</td><td>${escapeHTML(formatCurrency(line.amount))}</td><td>${escapeHTML(vertical)}</td><td>${escapeHTML(horizontal)}</td></tr>`;
+    return `<tr${index === 2 || index === 5 || index === 9 ? ' class="total"' : ""}><td>${line.label}</td><td>${escapeHTML(formatCurrency(line.amount))}</td><td>${escapeHTML(vertical)}</td><td>${escapeHTML(horizontal)}</td></tr>`;
   }).join("");
+}
+
+function formatCompactCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(value);
+}
+
+function renderDreWaterfall(latest) {
+  const chart = $("#dre-waterfall");
+  if (!latest) {
+    chart.innerHTML = `<div class="empty-state">Importe dados mensais para visualizar a DRE em cascata.</div>`;
+    $("#ebitda-benchmark").textContent = "Benchmark setorial fictício · EBITDA mediana 12%";
+    $("#dre-waterfall-note").textContent = "";
+    return;
+  }
+  const steps = [
+    { label: "Receita", value: latest.revenue, total: true },
+    { label: "CMV", value: -latest.cost_of_goods_sold },
+    { label: "Desp. variáveis", value: -latest.variable_expenses },
+    { label: "Desp. fixas", value: -latest.fixed_expenses },
+    { label: "EBITDA", value: calculateEbitda(latest), total: true }
+  ];
+  const netIncome = calculateNetIncome(latest);
+  if (netIncome != null) {
+    steps.push(
+      { label: "Depreciação", value: -Number(latest.depreciation_expenses) },
+      { label: "Financeiras", value: -Number(latest.financial_expenses) },
+      { label: "Impostos", value: -Number(latest.tax_expenses) },
+      { label: "Lucro líquido", value: netIncome, total: true }
+    );
+  }
+  const availableSteps = steps;
+  const cumulative = [];
+  let runningTotal = 0;
+  availableSteps.forEach(step => {
+    const start = step.total ? 0 : runningTotal;
+    runningTotal = step.total ? step.value : runningTotal + step.value;
+    cumulative.push({ start, end: runningTotal });
+  });
+  let minValue = Math.min(0, ...cumulative.map(item => Math.min(item.start, item.end)));
+  let maxValue = Math.max(0, ...cumulative.map(item => Math.max(item.start, item.end)));
+  if (minValue === maxValue) maxValue = 1;
+  const padding = (maxValue - minValue) * 0.1;
+  minValue -= padding;
+  maxValue += padding;
+  const width = availableSteps.length * 82 + 16;
+  const top = 24;
+  const bottom = 195;
+  const y = value => top + (maxValue - value) / (maxValue - minValue) * (bottom - top);
+  const barWidth = 34;
+  const zeroY = y(0);
+  const svgSteps = availableSteps.map((step, index) => {
+    const x = 30 + index * 82;
+    const { start, end } = cumulative[index];
+    const barTop = Math.min(y(start), y(end));
+    const barHeight = Math.max(2, Math.abs(y(end) - y(start)));
+    const type = step.total
+      ? step.value >= 0 ? "waterfall-total" : "waterfall-negative"
+      : step.value >= 0 ? "waterfall-positive" : "waterfall-negative";
+    const connector = index < availableSteps.length - 1
+      ? `<line class="waterfall-connector" x1="${x + barWidth}" y1="${y(end)}" x2="${x + 82}" y2="${y(end)}"/>`
+      : "";
+    return `${connector}<rect class="${type}" x="${x}" y="${barTop}" width="${barWidth}" height="${barHeight}" rx="3"><title>${escapeHTML(step.label)}: ${escapeHTML(formatCurrency(step.value))}</title></rect><text class="waterfall-value" text-anchor="middle" x="${x + barWidth / 2}" y="${Math.max(14, barTop - 5)}">${escapeHTML(formatCompactCurrency(step.value))}</text><text class="waterfall-label" text-anchor="middle" x="${x + barWidth / 2}" y="220">${escapeHTML(step.label)}</text>`;
+  }).join("");
+  chart.innerHTML = `<svg viewBox="0 0 ${width} 236" role="img" aria-label="DRE em cascata de receita líquida a lucro líquido estimado"><line class="waterfall-grid" x1="20" y1="${zeroY}" x2="${width - 10}" y2="${zeroY}"/>${svgSteps}</svg>`;
+  $("#dre-waterfall-note").textContent = netIncome == null
+    ? "Lucro líquido indisponível: informe depreciação, despesas financeiras e impostos no CSV mensal."
+    : "";
+  const margin = latest.revenue > 0 ? calculateEbitda(latest) / latest.revenue * 100 : null;
+  $("#ebitda-benchmark").textContent = margin == null
+    ? "Margem EBITDA indisponível · mediana setorial fictícia 12%"
+    : `Margem EBITDA ${formatPercent(margin)} · mediana setorial fictícia 12%`;
 }
 
 function renderCashForecast(latest) {
   const rows = $("#cash-forecast-rows");
+  const chart = $("#cash-forecast-chart");
   if (!latest) {
-    rows.innerHTML = `<tr><td colspan="5"><div class="empty-state">Importe dados mensais e uma previsão para visualizar o fluxo de caixa.</div></td></tr>`;
+    rows.innerHTML = `<tr><td colspan="7"><div class="empty-state">Importe dados mensais e uma previsão para visualizar o fluxo de caixa.</div></td></tr>`;
+    chart.innerHTML = "";
     return;
   }
 
   const forecastsByPeriod = new Map(cashForecasts.map(forecast => [forecast.period_start, forecast]));
-  const nextSixMonths = Array.from({ length: 6 }, (_, index) => monthOffset(latest.period_start, index + 1));
-  const selectedForecasts = nextSixMonths.map(period => forecastsByPeriod.get(period));
+  const nextTwelveMonths = Array.from({ length: 12 }, (_, index) => monthOffset(latest.period_start, index + 1));
+  const selectedForecasts = nextTwelveMonths.map(period => forecastsByPeriod.get(period));
   if (selectedForecasts.some(forecast => !forecast)) {
-    rows.innerHTML = `<tr><td colspan="5"><div class="empty-state">Importe uma previsão completa para os 6 meses seguintes a ${escapeHTML(formatPeriod(latest.period_start))}.</div></td></tr>`;
+    const loadedMonths = selectedForecasts.filter(Boolean).length;
+    rows.innerHTML = `<tr><td colspan="7"><div class="empty-state">Há ${loadedMonths} de 12 meses previstos. Importe períodos contínuos para completar os 12 meses seguintes a ${escapeHTML(formatPeriod(latest.period_start))}.</div></td></tr>`;
+    chart.innerHTML = "";
     return;
   }
 
-  let openingBalance = Number(latest.cash_balance);
-  rows.innerHTML = selectedForecasts.map((forecast, index) => {
-    const closingBalance = openingBalance + Number(forecast.expected_inflows) - Number(forecast.expected_outflows);
-    const row = `<tr><td>${escapeHTML(formatPeriod(nextSixMonths[index]))}</td><td>${escapeHTML(formatCurrency(openingBalance))}</td><td>${escapeHTML(formatCurrency(forecast.expected_inflows))}</td><td>${escapeHTML(formatCurrency(forecast.expected_outflows))}</td><td>${escapeHTML(formatCurrency(closingBalance))}</td></tr>`;
-    openingBalance = closingBalance;
-    return row;
+  const balances = { base: Number(latest.cash_balance), optimistic: Number(latest.cash_balance), stress: Number(latest.cash_balance) };
+  const forecastData = selectedForecasts.map((forecast, index) => {
+    const inflows = Number(forecast.expected_inflows);
+    const outflows = Number(forecast.expected_outflows);
+    const openingBalance = balances.base;
+    balances.base += inflows - outflows;
+    balances.optimistic += inflows * 1.1 - outflows * 0.9;
+    balances.stress += inflows * 0.9 - outflows * 1.1;
+    return {
+      period: nextTwelveMonths[index],
+      openingBalance,
+      inflows,
+      outflows,
+      base: balances.base,
+      optimistic: balances.optimistic,
+      stress: balances.stress
+    };
+  });
+  rows.innerHTML = forecastData.map(item =>
+    `<tr><td>${escapeHTML(formatPeriod(item.period))}</td><td>${escapeHTML(formatCurrency(item.openingBalance))}</td><td>${escapeHTML(formatCurrency(item.inflows))}</td><td>${escapeHTML(formatCurrency(item.outflows))}</td><td>${escapeHTML(formatCurrency(item.base))}</td><td>${escapeHTML(formatCurrency(item.optimistic))}</td><td>${escapeHTML(formatCurrency(item.stress))}</td></tr>`
+  ).join("");
+
+  const allValues = forecastData.flatMap(item => [item.base, item.optimistic, item.stress]);
+  let minValue = Math.min(0, ...allValues);
+  let maxValue = Math.max(0, ...allValues);
+  if (minValue === maxValue) maxValue = 1;
+  const padding = (maxValue - minValue) * 0.08;
+  minValue -= padding;
+  maxValue += padding;
+  const x = index => 42 + index * 69;
+  const y = value => 18 + (maxValue - value) / (maxValue - minValue) * 122;
+  const series = ["base", "optimistic", "stress"].map(name => {
+    const points = forecastData.map((item, index) => `${x(index)},${y(item[name])}`).join(" ");
+    const labels = forecastData.map((item, index) =>
+      `<text class="forecast-label" text-anchor="middle" x="${x(index)}" y="165">${escapeHTML(formatPeriod(item.period).split(" ")[0])}</text>`
+    ).join("");
+    return `<polyline class="forecast-line ${name}" points="${points}"/>${name === "base" ? labels : ""}`;
   }).join("");
+  chart.innerHTML = `<svg viewBox="0 0 850 174" role="img" aria-label="Saldo de caixa projetado nos cenários base, otimista e de estresse">${[0, 1, 2, 3].map(index => `<line class="forecast-grid" x1="34" y1="${18 + index * 40}" x2="830" y2="${18 + index * 40}"/>`).join("")}${series}</svg>`;
+}
+
+function renderDebtMaturities(latest) {
+  const chart = $("#debt-maturity-chart");
+  if (!latest) {
+    chart.innerHTML = `<div class="empty-state">Importe os dados realizados para consultar os vencimentos.</div>`;
+    return;
+  }
+  const maturitiesByMonth = new Map(debtMaturities.map(item => [item.period_start, item.scheduled_amount]));
+  const months = Array.from({ length: 12 }, (_, index) => monthOffset(latest.period_start, index + 1));
+  const amounts = months.map(month => maturitiesByMonth.get(month) || 0);
+  const maxAmount = Math.max(...amounts, 0);
+  if (maxAmount === 0) {
+    chart.innerHTML = `<div class="empty-state">Nenhum vencimento informado para os próximos 12 meses. Importe o cronograma para visualizar o perfil de pagamentos.</div>`;
+    return;
+  }
+  chart.innerHTML = `<div class="debt-bars">${months.map((month, index) => {
+    const amount = amounts[index];
+    const height = amount > 0 ? Math.max(3, amount / maxAmount * 100) : 0;
+    return `<div class="debt-month"><div class="debt-bar-track"><span class="debt-month-value">${amount ? escapeHTML(formatCompactCurrency(amount)) : ""}</span><div class="debt-bar${amount ? " has-value" : ""}" style="height:${height}%"><span hidden>${escapeHTML(formatCurrency(amount))}</span></div></div><div class="debt-month-label">${escapeHTML(formatPeriod(month).split(" ")[0])}</div></div>`;
+  }).join("")}</div>`;
+}
+
+function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
+  const scoreElement = $("#health-score");
+  const scoreCircle = $(".health-score");
+  const pillarsElement = $("#health-pillars");
+  const alertsElement = $("#financial-alerts");
+  if (!latest) {
+    scoreElement.textContent = "—";
+    scoreCircle.className = "health-score";
+    $("#health-score-caption").textContent = "Aguardando dados";
+    pillarsElement.innerHTML = "";
+    alertsElement.innerHTML = "";
+    return;
+  }
+
+  const liquidity = latest.supplier_payables > 0
+    ? (latest.cash_balance + latest.accounts_receivable + latest.inventory) / latest.supplier_payables
+    : null;
+  const ebitdaMargin = latest.revenue > 0 ? calculateEbitda(latest) / latest.revenue : null;
+  const monthlyReserve = latest.cost_of_goods_sold + latest.variable_expenses + latest.fixed_expenses;
+  const cashCoverage = monthlyReserve > 0 ? latest.cash_balance / monthlyReserve : null;
+  const netDebt = latest.gross_debt - latest.cash_balance;
+  const leverage = hasFullYear && ltmEbitda > 0 ? netDebt / ltmEbitda : null;
+  const pillarValues = [
+    {
+      name: "Liquidez simplificada",
+      value: liquidity,
+      display: liquidity == null ? "N/D" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(liquidity)}x`,
+      status: liquidity == null ? "unavailable" : liquidity < 1 ? "critical" : liquidity < 1.5 ? "warning" : "good",
+      score: liquidity == null ? null : liquidity < 1 ? 25 : liquidity < 1.5 ? 60 : 100
+    },
+    {
+      name: "Endividamento líquido / EBITDA",
+      value: leverage,
+      display: leverage == null ? "N/D" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(leverage)}x`,
+      status: leverage == null ? "unavailable" : leverage > 3 ? "critical" : leverage > 1.5 ? "warning" : "good",
+      score: leverage == null ? null : leverage > 3 ? 25 : leverage > 1.5 ? 60 : 100
+    },
+    {
+      name: "Margem EBITDA",
+      value: ebitdaMargin,
+      display: ebitdaMargin == null ? "N/D" : formatPercent(ebitdaMargin * 100),
+      status: ebitdaMargin == null ? "unavailable" : ebitdaMargin < 0 ? "critical" : ebitdaMargin < 0.05 ? "warning" : "good",
+      score: ebitdaMargin == null ? null : ebitdaMargin < 0 ? 20 : ebitdaMargin < 0.05 ? 60 : 100
+    },
+    {
+      name: "Caixa / reserva mensal",
+      value: cashCoverage,
+      display: cashCoverage == null ? "N/D" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(cashCoverage)} mês(es)`,
+      status: cashCoverage == null ? "unavailable" : cashCoverage < 1 ? "critical" : cashCoverage < 3 ? "warning" : "good",
+      score: cashCoverage == null ? null : cashCoverage < 1 ? 25 : cashCoverage < 3 ? 60 : 100
+    }
+  ];
+  const availablePillars = pillarValues.filter(pillar => pillar.score != null);
+  const score = availablePillars.length
+    ? Math.round(availablePillars.reduce((sum, pillar) => sum + pillar.score, 0) / availablePillars.length)
+    : null;
+  scoreElement.textContent = score == null ? "—" : String(score);
+  scoreCircle.className = `health-score${score == null ? "" : score >= 75 ? " good" : score >= 50 ? " warning" : " critical"}`;
+  $("#health-score-caption").textContent = score == null
+    ? "Dados insuficientes"
+    : `Calculado com ${availablePillars.length} de 4 pilares`;
+  pillarsElement.innerHTML = pillarValues.map(pillar =>
+    `<div class="health-pillar ${pillar.status === "unavailable" ? "" : pillar.status}"><div class="health-pillar-name"><span class="health-pillar-dot"></span>${escapeHTML(pillar.name)}</div><div class="health-pillar-value">${escapeHTML(pillar.display)}</div></div>`
+  ).join("");
+
+  const alerts = [];
+  if (liquidity != null && liquidity < 1) {
+    alerts.push({ critical: true, title: "Liquidez simplificada abaixo de 1,0x", message: `Cobertura estimada de ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(liquidity)}x considerando caixa, recebíveis e estoque sobre fornecedores.` });
+  }
+  if (leverage != null && leverage > 3) {
+    alerts.push({ critical: true, title: "Alavancagem acima de 3,0x", message: `Dívida líquida/EBITDA LTM de ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(leverage)}x.` });
+  }
+  if (cashCoverage != null && cashCoverage < 1) {
+    alerts.push({ critical: true, title: "Caixa abaixo da reserva operacional", message: `O caixa cobre ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(cashCoverage)} mês(es) do CMV e das despesas variáveis e fixas atuais.` });
+  }
+  const unavailableRules = [
+    liquidity == null ? "liquidez (sem fornecedores informados)" : null,
+    leverage == null ? "endividamento (exige 12 meses completos e EBITDA LTM positivo)" : null,
+    cashCoverage == null ? "reserva de caixa (sem custos e despesas mensais)" : null
+  ].filter(Boolean);
+  const alertCards = alerts.map(alert =>
+    `<div class="financial-alert${alert.critical ? " critical" : ""}"><strong>${escapeHTML(alert.title)}</strong>${escapeHTML(alert.message)}</div>`
+  );
+  if (unavailableRules.length) {
+    alertCards.push(`<div class="financial-alert info"><strong>Indicadores não avaliados</strong>${escapeHTML(unavailableRules.join("; "))}.</div>`);
+  }
+  if (!alerts.length && !unavailableRules.length) {
+    alertCards.push(`<div class="financial-alert ok"><strong>Nenhum alerta automático identificado</strong>Regras avaliadas: liquidez simplificada abaixo de 1,0x, dívida líquida/EBITDA acima de 3,0x e caixa abaixo de 1 mês de custos e despesas operacionais.</div>`);
+  }
+  alertsElement.innerHTML = alertCards.join("");
 }
 
 function renderFinancialAnalysis() {
@@ -471,7 +752,10 @@ function renderFinancialAnalysis() {
     $(`#${id}`).textContent = value;
   });
   renderDreAnalysis(latest, previous);
+  renderDreWaterfall(latest);
   renderCashForecast(latest);
+  renderDebtMaturities(latest);
+  renderHealthAndAlerts(latest, hasFullYear, ltmEbitda);
 }
 
 async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
@@ -479,6 +763,7 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
   activeFinancialCompanyId = companyId;
   financialPeriods = [];
   cashForecasts = [];
+  debtMaturities = [];
   if (!companyId) {
     renderFinancialAnalysis();
     return true;
@@ -487,16 +772,22 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
 
   let periodsResult;
   let forecastsResult;
+  let maturitiesResult;
   try {
-    [periodsResult, forecastsResult] = await Promise.all([
+    [periodsResult, forecastsResult, maturitiesResult] = await Promise.all([
       supabase
         .from("vertice_financial_periods")
-        .select("period_start, revenue, cost_of_goods_sold, purchases, variable_expenses, fixed_expenses, accounts_receivable, inventory, supplier_payables, gross_debt, cash_balance")
+        .select("period_start, revenue, cost_of_goods_sold, purchases, variable_expenses, fixed_expenses, accounts_receivable, inventory, supplier_payables, gross_debt, cash_balance, depreciation_expenses, financial_expenses, tax_expenses")
         .eq("company_id", companyId)
         .order("period_start", { ascending: true }),
       supabase
         .from("vertice_cash_forecasts")
         .select("period_start, expected_inflows, expected_outflows")
+        .eq("company_id", companyId)
+        .order("period_start", { ascending: true }),
+      supabase
+        .from("vertice_debt_maturities")
+        .select("period_start, scheduled_amount")
         .eq("company_id", companyId)
         .order("period_start", { ascending: true })
     ]);
@@ -507,8 +798,8 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
     return false;
   }
   if (request !== financialRequest) return false;
-  if (periodsResult.error || forecastsResult.error) {
-    const error = periodsResult.error || forecastsResult.error;
+  if (periodsResult.error || forecastsResult.error || maturitiesResult.error) {
+    const error = periodsResult.error || forecastsResult.error || maturitiesResult.error;
     console.error("Erro ao carregar diagnóstico financeiro:", error);
     showToast("Não foi possível carregar os dados financeiros. Verifique a migration e tente novamente.");
     return false;
@@ -526,28 +817,33 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
     inventory: Number(period.inventory),
     supplier_payables: Number(period.supplier_payables),
     gross_debt: Number(period.gross_debt),
-    cash_balance: Number(period.cash_balance)
+    cash_balance: Number(period.cash_balance),
+    depreciation_expenses: period.depreciation_expenses == null ? null : Number(period.depreciation_expenses),
+    financial_expenses: period.financial_expenses == null ? null : Number(period.financial_expenses),
+    tax_expenses: period.tax_expenses == null ? null : Number(period.tax_expenses)
   }));
   cashForecasts = (forecastsResult.data || []).map(forecast => ({
     ...forecast,
     expected_inflows: Number(forecast.expected_inflows),
     expected_outflows: Number(forecast.expected_outflows)
   }));
+  debtMaturities = (maturitiesResult.data || []).map(maturity => ({
+    ...maturity,
+    scheduled_amount: Number(maturity.scheduled_amount)
+  }));
   renderFinancialAnalysis();
   return true;
 }
 
 function setImportFileStatus(kind, message, isError = false) {
-  const suffix = kind === "forecast" ? "forecast" : "financial";
-  const status = $(`#${suffix}-csv-name`);
+  const status = $(`#${kind}-csv-name`);
   status.textContent = message;
   status.classList.toggle("error", isError);
 }
 
 function bindCsvFileInput(kind) {
-  const suffix = kind === "forecast" ? "forecast" : "financial";
-  const fileInput = $(`#${suffix}-csv-file`);
-  const importButton = $(`#import-${suffix}-csv`);
+  const fileInput = $(`#${kind}-csv-file`);
+  const importButton = $(`#import-${kind}-csv`);
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
     importButton.disabled = !file;
@@ -557,9 +853,9 @@ function bindCsvFileInput(kind) {
 
 async function importFinancialCsv(kind) {
   const isForecast = kind === "forecast";
-  const suffix = isForecast ? "forecast" : "financial";
-  const fileInput = $(`#${suffix}-csv-file`);
-  const importButton = $(`#import-${suffix}-csv`);
+  const isDebt = kind === "debt";
+  const fileInput = $(`#${kind}-csv-file`);
+  const importButton = $(`#import-${kind}-csv`);
   const file = fileInput.files[0];
   const companyId = getFinancialCompanyId();
   if (!file || !companyId) {
@@ -575,19 +871,31 @@ async function importFinancialCsv(kind) {
   const originalLabel = importButton.textContent;
   importButton.textContent = "Importando...";
   try {
-    const records = parseFinancialCsv(await file.text(), isForecast);
-    if (isForecast) {
+    let records = isDebt
+      ? parseDebtMaturityCsv(await file.text())
+      : parseFinancialCsv(await file.text(), isForecast);
+    if (isForecast || isDebt) {
       const latest = financialPeriods[financialPeriods.length - 1];
-      if (!latest) throw new Error("Importe os dados realizados antes de importar a previsão.");
-      if (records.length !== 6) throw new Error("A previsão deve conter exatamente 6 meses.");
+      if (!latest) throw new Error("Importe os dados realizados antes de importar previsões ou vencimentos.");
       records.sort((first, second) => first.period_start.localeCompare(second.period_start));
-      const expectedPeriods = Array.from({ length: 6 }, (_, index) => monthOffset(latest.period_start, index + 1));
-      if (records.some((record, index) => record.period_start !== expectedPeriods[index])) {
-        throw new Error("A previsão deve cobrir, sem lacunas, os 6 meses após o último período realizado.");
+      if (isForecast && records.length > 12) {
+        throw new Error("A previsão pode incluir no máximo 12 meses por arquivo.");
+      }
+      const forecastHorizon = Array.from({ length: 12 }, (_, index) => monthOffset(latest.period_start, index + 1));
+      const periodsInHorizon = records.map(record => forecastHorizon.indexOf(record.period_start));
+      if (periodsInHorizon.some(index => index < 0)) {
+        throw new Error("As datas devem estar nos 12 meses após o último período realizado.");
+      }
+      if (periodsInHorizon.some((monthIndex, index) => index > 0 && monthIndex !== periodsInHorizon[index - 1] + 1)) {
+        throw new Error("Os períodos do arquivo devem ser contínuos, sem lacunas.");
       }
     }
 
-    const table = isForecast ? "vertice_cash_forecasts" : "vertice_financial_periods";
+    const table = isDebt
+      ? "vertice_debt_maturities"
+      : isForecast
+        ? "vertice_cash_forecasts"
+        : "vertice_financial_periods";
     const { error } = await supabase
       .from(table)
       .upsert(records.map(record => ({ ...record, company_id: companyId })), {
@@ -599,7 +907,11 @@ async function importFinancialCsv(kind) {
     importButton.disabled = true;
     setImportFileStatus(kind, `${records.length} linha(s) importada(s) com sucesso.`);
     const loaded = await loadFinancialAnalysis(companyId);
-    if (loaded) showToast(isForecast ? "Previsão de caixa atualizada." : "Dados financeiros atualizados.");
+    if (loaded) showToast(isDebt
+      ? "Cronograma de vencimentos atualizado."
+      : isForecast
+        ? "Previsão de caixa atualizada."
+        : "Dados financeiros atualizados.");
   } catch (error) {
     console.error("Erro ao importar CSV financeiro:", error);
     setImportFileStatus(kind, error instanceof Error ? error.message : "Não foi possível importar o arquivo.", true);
@@ -898,10 +1210,13 @@ $("#refresh-financial-analysis").addEventListener("click", async event => {
 $("#client-home-link").addEventListener("click", () => navigate("client"));
 $("#download-financial-template").addEventListener("click", downloadFinancialTemplate);
 $("#download-forecast-template").addEventListener("click", downloadForecastTemplate);
+$("#download-debt-template").addEventListener("click", downloadDebtTemplate);
 $("#import-financial-csv").addEventListener("click", () => importFinancialCsv("financial"));
 $("#import-forecast-csv").addEventListener("click", () => importFinancialCsv("forecast"));
+$("#import-debt-csv").addEventListener("click", () => importFinancialCsv("debt"));
 bindCsvFileInput("financial");
 bindCsvFileInput("forecast");
+bindCsvFileInput("debt");
 $("#refresh-admin-accounts").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;

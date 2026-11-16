@@ -28,25 +28,34 @@ As empresas seed e os indicadores financeiros do painel são fictícios. O diagn
 
 ## Diagnóstico financeiro e importação CSV
 
-Execute também a migration `20261116032100_add_company_financial_analysis.sql` no SQL Editor do Supabase. Ela cria as tabelas de períodos realizados e previsões, com RLS para administradores e para o usuário dono da própria empresa. Não há permissão de exclusão direta; uma empresa com dados financeiros vinculados não pode ser removida.
+Execute também as migrations `20261116032100_add_company_financial_analysis.sql` e `20261116040000_add_financial_dashboard_metrics.sql` no SQL Editor do Supabase. Elas criam as tabelas de períodos realizados, previsões e vencimentos de dívida, e os campos de DRE adicionais, com RLS para administradores e para o usuário dono da própria empresa. Não há permissão de exclusão direta; uma empresa com dados financeiros vinculados não pode ser removida.
 
 Na área **Diagnóstico**, baixe os modelos CSV e mantenha os cabeçalhos. Os arquivos usam `;` como separador; valores podem usar vírgula decimal. Datas aceitas: `AAAA-MM` ou `AAAA-MM-DD` (o mês é armazenado como competência mensal). O limite de importação é 2 MB. Arquivos `.xlsx` não são aceitos.
 
 O modelo mensal usa uma linha por competência e as colunas:
 
-`periodo;receita;cmv;compras;despesas_variaveis;despesas_fixas;contas_a_receber;estoque;fornecedores;divida_bruta;caixa`
+`periodo;receita;cmv;compras;despesas_variaveis;despesas_fixas;contas_a_receber;estoque;fornecedores;divida_bruta;caixa;depreciacao;despesas_financeiras;impostos`
 
-O modelo de previsão contém exatamente os seis meses seguintes ao último mês realizado:
+Depreciação, despesas financeiras e impostos são opcionais para manter compatibilidade com arquivos anteriores. Sem os três valores, o lucro líquido não é calculado e a cascata termina no EBITDA.
+
+O modelo de previsão contém até 12 meses após o último mês realizado; é possível importar períodos contínuos em arquivos separados:
 
 `periodo;entradas_previstas;saidas_previstas`
+
+O cronograma de dívida usa o modelo `periodo;valor_vencimento`, com os pagamentos de principal previstos em cada mês. Linhas repetidas para o mesmo mês são somadas. O saldo bruto da dívida não é usado para inferir vencimentos.
 
 Importar novamente uma competência atualiza seus valores. As métricas são calculadas assim:
 
 - PMR = contas a receber ÷ receita × dias do mês; PME = estoque ÷ CMV × dias do mês; PMP = fornecedores ÷ compras × dias do mês.
 - Ciclo financeiro = PMR + PME − PMP; necessidade de capital de giro = contas a receber + estoque − fornecedores.
 - EBITDA mensal = receita − CMV − despesas variáveis − despesas fixas. A dívida líquida/EBITDA usa (dívida bruta − caixa) ÷ EBITDA acumulado de 12 competências consecutivas; sem um ano completo, a métrica não é exibida.
+- O score de saúde é a média dos pilares disponíveis: liquidez simplificada (caixa + recebíveis + estoque sobre fornecedores), dívida líquida/EBITDA, margem EBITDA e cobertura de caixa sobre o CMV e despesas fixas e variáveis mensais. A liquidez não inclui outros passivos circulantes e não substitui uma análise de balanço.
+- Os alertas sinalizam liquidez simplificada abaixo de 1,0x, dívida líquida/EBITDA acima de 3,0x e caixa menor que um mês de CMV e despesas fixas e variáveis.
+- O fluxo de caixa apresenta cenários derivados da previsão base: o otimista aumenta entradas e reduz saídas em 10%; o cenário de estresse faz o inverso. São simulações de sensibilidade, não previsões garantidas.
+- O benchmark de margem EBITDA (mediana fictícia de 12%) é apenas demonstrativo, não uma comparação setorial validada.
+- O lucro líquido estimado subtrai depreciação, despesas financeiras e impostos do EBITDA; sem todos esses campos, o lucro líquido não é exibido.
 - Análise vertical da DRE compara cada linha à receita do mês; análise horizontal compara com o mês calendário anterior.
 - Ponto de equilíbrio = despesas fixas ÷ margem de contribuição percentual, com margem de contribuição = (receita − CMV − despesas variáveis) ÷ receita.
-- Projeção de caixa carrega o saldo final de cada mês para o mês seguinte, começando pelo caixa do último período realizado.
+- Projeção de caixa carrega o saldo final de cada mês para o mês seguinte, começando pelo caixa do último período realizado. Os gráficos de previsão e vencimentos aparecem quando há os dados necessários para os 12 meses.
 
 PMR, PME e PMP usam saldos de fechamento e são estimativas. Valide o plano de contas, os critérios de competência e os valores com um profissional habilitado. Como o diagnóstico armazena informações financeiras da empresa, use dados reais apenas após validar as configurações de acesso, privacidade, retenção e backup do ambiente.

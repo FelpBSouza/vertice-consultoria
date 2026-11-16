@@ -136,8 +136,61 @@
     .analysis-panel { margin-bottom: 16px; }
     .analysis-table-wrap { overflow-x: auto; }
     .analysis-table { min-width: 620px; }
-    .financial-import-grid { margin-top: 16px; }
+    .financial-import-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
     .financial-import-grid .panel { min-width: 0; }
+    .financial-alerts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .financial-alert { padding: 12px 14px; border: 1px solid #f0dfc1; border-radius: 9px; background: #fffaf0; color: #806334; font-size: 11px; line-height: 1.5; }
+    .financial-alert.critical { border-color: #f0d2cf; background: #fff5f4; color: #974d45; }
+    .financial-alert strong { display: block; margin-bottom: 3px; font-size: 11px; }
+    .financial-alert.ok { border-color: #dcebe0; background: #f4faf5; color: #477354; }
+    .financial-alert.info { border-color: #dce5eb; background: #f5f9fb; color: #536e7d; }
+    .health-panel { margin-bottom: 16px; }
+    .health-content { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 24px; padding-top: 18px; }
+    .health-score { display: grid; justify-items: center; align-content: center; width: 126px; height: 126px; border: 8px solid #e8efea; border-radius: 50%; text-align: center; }
+    .health-score.good { border-color: #b7ddc4; }
+    .health-score.warning { border-color: #efd79e; }
+    .health-score.critical { border-color: #e7b6ae; }
+    .health-score strong { font-size: 32px; line-height: 1; letter-spacing: -.05em; }
+    .health-score span { margin-top: 4px; color: #78827d; font-size: 10px; }
+    .health-score small { margin-top: 4px; color: #89928d; font-size: 9px; }
+    .health-pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .health-pillar { padding: 12px; border: 1px solid #edf0ee; border-radius: 8px; }
+    .health-pillar-name { display: flex; align-items: center; gap: 7px; color: #77827c; font-size: 10px; }
+    .health-pillar-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #a9b1ac; }
+    .health-pillar.good .health-pillar-dot { background: #4b9b68; }
+    .health-pillar.warning .health-pillar-dot { background: #d49b3f; }
+    .health-pillar.critical .health-pillar-dot { background: #c6685c; }
+    .health-pillar-value { margin-top: 9px; font-size: 16px; font-weight: 650; }
+    .waterfall-chart, .forecast-chart, .debt-maturity-chart { overflow-x: auto; }
+    .waterfall-chart { margin-top: 12px; }
+    .waterfall-chart svg, .forecast-chart svg { display: block; width: 100%; min-width: 700px; }
+    .waterfall-grid { stroke: #edf0ee; stroke-width: 1; }
+    .waterfall-connector { stroke: #b8c2bc; stroke-width: 1; stroke-dasharray: 3 3; }
+    .waterfall-positive { fill: #4b9b68; }
+    .waterfall-negative { fill: #d88778; }
+    .waterfall-total { fill: #285d43; }
+    .waterfall-label { fill: #77827c; font-size: 10px; }
+    .waterfall-value { fill: #39483f; font-size: 9px; font-weight: 600; }
+    .benchmark-note { margin-top: 5px; color: #89928d; font-size: 9px; }
+    .forecast-legend { display: flex; gap: 16px; margin-top: 13px; color: #78827d; font-size: 10px; }
+    .forecast-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .forecast-legend i { width: 9px; height: 9px; border-radius: 50%; background: #4b9b68; }
+    .forecast-legend i.optimistic { background: #6ea2c3; }
+    .forecast-legend i.stress { background: #d88778; }
+    .forecast-chart { margin: 5px 0 12px; }
+    .forecast-grid { stroke: #edf0ee; stroke-width: 1; }
+    .forecast-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .forecast-line.base { stroke: #4b9b68; }
+    .forecast-line.optimistic { stroke: #6ea2c3; }
+    .forecast-line.stress { stroke: #d88778; }
+    .forecast-label { fill: #89928d; font-size: 9px; }
+    .debt-bars { display: grid; grid-template-columns: repeat(12, minmax(55px, 1fr)); align-items: end; gap: 8px; min-width: 760px; height: 185px; padding: 15px 6px 0; }
+    .debt-month { display: grid; grid-template-rows: 1fr 18px; height: 100%; text-align: center; }
+    .debt-bar-track { display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid #e8ece9; }
+    .debt-bar { width: min(28px, 70%); min-height: 2px; border-radius: 4px 4px 0 0; background: #6ea886; }
+    .debt-bar.has-value { background: #d3a75c; }
+    .debt-month-label { padding-top: 5px; color: #89928d; font-size: 9px; }
+    .debt-month-value { margin-bottom: 4px; color: #59665f; font-size: 8px; }
     .upload-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
     .upload-file-name { margin: 10px 0 0; color: #78827d; font-size: 10px; overflow-wrap: anywhere; }
     .upload-file-name.error { color: #9b493e; }
@@ -276,6 +329,9 @@
       .analysis-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .financial-page-heading { align-items: center; }
       .financial-import-grid { grid-template-columns: 1fr; }
+      .financial-alerts { grid-template-columns: 1fr; }
+      .health-content { grid-template-columns: 1fr; justify-items: center; }
+      .health-pillars { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
       .upload-actions .btn { flex: 1 1 130px; }
     }
     @media (max-width: 390px) {
