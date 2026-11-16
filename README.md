@@ -1,4 +1,4 @@
-# Vértice — Consultoria empresarial
+# Vértice — Consultoria econômico-financeira
 
 Site público e aplicação estática para consultoria financeira empresarial, hospedados no GitHub Pages e conectados ao Supabase para autenticação, cadastro de empresas e diagnóstico financeiro.
 
@@ -28,7 +28,7 @@ A página inicial (`/vertice-consultoria/`) é pública. Os botões **Entrar** e
 
 ## Dados demonstrativos
 
-As empresas seed e os indicadores financeiros do painel são fictícios. No Diagnóstico, a empresa seed **Orla Café e Alimentos Ltda.** recebe uma demonstração local com base nos números da Visão geral e da DRE quando ainda não possui dados financeiros importados. Essa demonstração não é gravada no Supabase e os imports ficam desativados nesse modo. Outras empresas e contas de clientes só mostram dados persistidos/importados; não recebem dados de demonstração automaticamente. O diagnóstico não realiza escrituração contábil nem produz recomendações automáticas de investimento.
+As empresas seed e os indicadores financeiros do painel são fictícios. A Visão geral administrativa apresenta a demonstração da empresa **Orla Café e Alimentos Ltda.**; usuários de clientes acessam somente a área da própria empresa. No Diagnóstico, a empresa seed recebe uma demonstração local com base nos números da Visão geral e da DRE quando ainda não possui dados financeiros importados. Essa demonstração não é gravada no Supabase e os imports ficam desativados nesse modo. Outras empresas e contas de clientes só mostram dados persistidos/importados; não recebem dados de demonstração automaticamente. O diagnóstico não realiza escrituração contábil nem produz recomendações automáticas de investimento.
 
 ## Diagnóstico financeiro e importação CSV
 

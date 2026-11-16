@@ -40,6 +40,9 @@ let cashForecasts = [];
 let debtMaturities = [];
 let isDemoFinancialAnalysis = false;
 let activeFinancialCompanyId = null;
+let activeFinancialAlerts = [];
+let overviewCashPeriods = [];
+let overviewCashRange = "1A";
 let toastTimer;
 let sessionRequest = 0;
 let financialRequest = 0;
@@ -63,12 +66,19 @@ function formatCurrency(value) {
 }
 
 function normalizeCompany(company) {
+  const monthlyRevenue = Number(company.monthly_revenue);
+  const ebitdaAmount = company.ebitda == null ? null : Number(company.ebitda);
   return {
     id: company.id,
     name: company.name,
     sector: company.sector,
-    revenue: formatCurrency(company.monthly_revenue),
-    ebitda: formatCurrency(company.ebitda),
+    monthlyRevenue,
+    ebitdaAmount,
+    margin: monthlyRevenue > 0 && ebitdaAmount != null
+      ? ebitdaAmount / monthlyRevenue * 100
+      : null,
+    revenue: formatCurrency(monthlyRevenue),
+    ebitda: formatCurrency(ebitdaAmount),
     status: company.status
   };
 }
@@ -76,22 +86,74 @@ function normalizeCompany(company) {
 function renderCompanies(query = "") {
   const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
   const filtered = companies.filter(company =>
-    `${company.name} ${company.sector} ${company.revenue} ${company.ebitda} ${company.status}`
+    `${company.name} ${company.sector} ${company.revenue} ${company.ebitda} ${formatPercent(company.margin)} ${company.status}`
       .toLocaleLowerCase("pt-BR")
       .includes(normalizedQuery)
   );
   const companyCell = company => `<div class="client-info"><span class="client-avatar">${escapeHTML(company.name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toLocaleUpperCase("pt-BR"))}</span><div><div class="client-name">${escapeHTML(company.name)}</div><div class="client-email">${escapeHTML(company.sector)}</div></div></div>`;
+  const companyStatus = company => company.status === "Dados pendentes"
+    ? `<button class="company-status review company-status-link" type="button" data-missing-company="${escapeHTML(company.id)}" aria-label="Ver o que falta enviar para ${escapeHTML(company.name)}">O que falta enviar</button>`
+    : `<span class="company-status ${isReviewNeeded(company) ? "review" : ""}">${escapeHTML(company.status)}</span>`;
   const dashboardRows = filtered.length
-    ? filtered.slice(0, 4).map(company => `<tr><td>${companyCell(company)}</td><td>${escapeHTML(company.revenue)}</td><td>${escapeHTML(company.ebitda)}</td><td><span class="company-status ${isReviewNeeded(company) ? "review" : ""}">${escapeHTML(company.status)}</span></td></tr>`).join("")
-    : `<tr><td colspan="4"><div class="empty-state">Nenhuma empresa cadastrada.</div></td></tr>`;
+    ? filtered.slice(0, 4).map(company => `<tr><td>${companyCell(company)}</td><td>${escapeHTML(company.revenue)}</td><td>${escapeHTML(company.ebitda)}</td><td>${escapeHTML(formatPercent(company.margin))}</td><td>${companyStatus(company)}</td></tr>`).join("")
+    : `<tr><td colspan="5"><div class="empty-state">Nenhuma empresa cadastrada.</div></td></tr>`;
   const allRows = filtered.length
-    ? filtered.map(company => `<tr><td>${companyCell(company)}</td><td>${escapeHTML(company.sector)}</td><td>${escapeHTML(company.revenue)}</td><td>${escapeHTML(company.ebitda)}</td><td><span class="company-status ${isReviewNeeded(company) ? "review" : ""}">${escapeHTML(company.status)}</span></td></tr>`).join("")
-    : `<tr><td colspan="5"><div class="empty-state">Nenhuma empresa encontrada.</div></td></tr>`;
+    ? filtered.map(company => `<tr><td>${companyCell(company)}</td><td>${escapeHTML(company.sector)}</td><td>${escapeHTML(company.revenue)}</td><td>${escapeHTML(company.ebitda)}</td><td>${escapeHTML(formatPercent(company.margin))}</td><td>${companyStatus(company)}</td></tr>`).join("")
+    : `<tr><td colspan="6"><div class="empty-state">Nenhuma empresa encontrada.</div></td></tr>`;
 
   $("#company-rows").innerHTML = dashboardRows;
   $("#all-company-rows").innerHTML = allRows;
   $("#company-count").textContent = filtered.length;
   $(".nav-count", $('[data-page="companies"]')).textContent = companies.length;
+  renderDashboardInsights();
+}
+
+function renderDashboardInsights() {
+  const insights = [];
+  const currentAssets = Number($("#demo-current-assets").dataset.value);
+  const currentLiabilities = Number($("#demo-current-liabilities").dataset.value);
+  if (currentAssets > 0 && currentLiabilities > 0) {
+    const currentRatio = currentAssets / currentLiabilities;
+    insights.push({
+      title: `Liquidez corrente da Orla: ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(currentRatio)}x`,
+      message: `Acima do parâmetro demonstrativo de 1,00x; ativo circulante ÷ passivo circulante.`
+    });
+  }
+
+  const orla = companies.find(company => company.name === DEMO_COMPANY_NAME);
+  const belowOrla = orla?.margin == null
+    ? []
+    : companies.filter(company => company.id !== orla.id && company.margin != null && company.margin < orla.margin);
+  if (orla && belowOrla.length) {
+    const comparisons = belowOrla
+      .sort((left, right) => left.margin - right.margin)
+      .map(company => `${company.name} (${formatPercent(company.margin)})`)
+      .join(" e ");
+    insights.push({
+      title: `Margens abaixo da Orla (${formatPercent(orla.margin)})`,
+      message: `${comparisons}; comparação calculada a partir do EBITDA e do faturamento mensal cadastrados.`
+    });
+  }
+
+  const companiesWithMargin = companies.filter(company => company.margin != null);
+  if (companiesWithMargin.length >= 2) {
+    const orderedMargins = [...companiesWithMargin].sort((left, right) => left.margin - right.margin);
+    const lowest = orderedMargins[0];
+    const highest = orderedMargins[orderedMargins.length - 1];
+    insights.push({
+      title: `Diferença de margem na carteira: ${formatPercent(highest.margin - lowest.margin)} p.p.`,
+      message: `Maior: ${highest.name} (${formatPercent(highest.margin)}); menor: ${lowest.name} (${formatPercent(lowest.margin)}).`
+    });
+  } else {
+    insights.push({
+      title: "Comparação de margem indisponível",
+      message: "Cadastre faturamento mensal e EBITDA de pelo menos duas empresas para comparar as margens."
+    });
+  }
+
+  $("#dashboard-insights").innerHTML = insights.map((insight, index) =>
+    `<div class="recommendation"><span class="recommendation-number">${index + 1}</span><div><strong>${escapeHTML(insight.title)}</strong><p>${escapeHTML(insight.message)}</p></div></div>`
+  ).join("");
 }
 
 function formatDate(value) {
@@ -648,7 +710,16 @@ function renderDebtMaturities(latest) {
   }).join("")}</div>`;
 }
 
-function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
+function updateAlertNotification(alerts) {
+  activeFinancialAlerts = alerts;
+  $(".notification-dot").hidden = alerts.length === 0;
+  $("#notification-button").setAttribute(
+    "aria-label",
+    alerts.length ? `Notificações: ${alerts.length} alerta(s)` : "Notificações"
+  );
+}
+
+function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda, updateOverview = false) {
   const scoreElement = $("#health-score");
   const scoreCircle = $(".health-score");
   const pillarsElement = $("#health-pillars");
@@ -659,6 +730,12 @@ function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
     $("#health-score-caption").textContent = "Aguardando dados";
     pillarsElement.innerHTML = "";
     alertsElement.innerHTML = "";
+    if (!updateOverview) updateAlertNotification([]);
+    if (updateOverview) {
+      $("#overview-health-score").textContent = "—";
+      $("#overview-health-caption").textContent = "Aguardando dados";
+      $("#overview-health-pillars").innerHTML = "";
+    }
     return;
   }
 
@@ -709,9 +786,20 @@ function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
   $("#health-score-caption").textContent = score == null
     ? "Dados insuficientes"
     : `Calculado com ${availablePillars.length} de 4 pilares`;
-  pillarsElement.innerHTML = pillarValues.map(pillar =>
+  const pillarMarkup = pillarValues.map(pillar =>
     `<div class="health-pillar ${pillar.status === "unavailable" ? "" : pillar.status}"><div class="health-pillar-name"><span class="health-pillar-dot"></span>${escapeHTML(pillar.name)}</div><div class="health-pillar-value">${escapeHTML(pillar.display)}</div></div>`
   ).join("");
+  pillarsElement.innerHTML = pillarMarkup;
+  if (updateOverview) {
+    const overviewScore = $("#overview-health-score");
+    const scoreStatus = score == null ? "" : score >= 75 ? "good" : score >= 50 ? "warning" : "critical";
+    overviewScore.textContent = score == null ? "—" : String(score);
+    overviewScore.className = `overview-score-value${scoreStatus ? ` ${scoreStatus}` : ""}`;
+    $("#overview-health-caption").textContent = score == null
+      ? "Dados insuficientes"
+      : `Calculado com ${availablePillars.length} de 4 pilares`;
+    $("#overview-health-pillars").innerHTML = pillarMarkup;
+  }
 
   const alerts = [];
   if (liquidity != null && liquidity < 1) {
@@ -737,7 +825,159 @@ function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
   if (!alerts.length && !unavailableRules.length) {
     alertCards.push(`<div class="financial-alert ok"><strong>Nenhum alerta automático identificado</strong>Regras avaliadas: liquidez simplificada abaixo de 1,0x, dívida líquida/EBITDA acima de 3,0x e caixa abaixo de 1 mês de custos e despesas operacionais.</div>`);
   }
+  if (!updateOverview) updateAlertNotification(alerts);
   alertsElement.innerHTML = alertCards.join("");
+}
+
+function readDemoBalanceValue(selector) {
+  const value = Number($(selector).dataset.value);
+  return Number.isFinite(value) ? value : null;
+}
+
+function renderDashboardBalanceCharts() {
+  const currentAssets = readDemoBalanceValue("#demo-current-assets");
+  const noncurrentAssets = readDemoBalanceValue("#demo-noncurrent-assets");
+  const totalAssets = readDemoBalanceValue("#demo-assets-total");
+  const currentLiabilities = readDemoBalanceValue("#demo-current-liabilities");
+  const noncurrentLiabilities = readDemoBalanceValue("#demo-noncurrent-liabilities");
+  const equity = readDemoBalanceValue("#demo-equity");
+  if ([currentAssets, noncurrentAssets, totalAssets, currentLiabilities, noncurrentLiabilities, equity].some(value => value == null)) {
+    return;
+  }
+
+  const liabilities = currentLiabilities + noncurrentLiabilities;
+  const totalCapital = liabilities + equity;
+  const assetShare = totalAssets > 0 ? currentAssets / totalAssets * 100 : 0;
+  const liabilityShare = totalCapital > 0 ? liabilities / totalCapital * 100 : 0;
+  $(".asset-donut").style.background = `conic-gradient(#286d4b 0 ${assetShare}%, #7fb696 ${assetShare}% 100%)`;
+  $(".capital-donut").style.background = `conic-gradient(#d7ba82 0 ${liabilityShare}%, #d9e7dc ${liabilityShare}% 100%)`;
+  $("#overview-assets-total").textContent = formatCompactCurrency(totalAssets);
+  $("#overview-current-assets").textContent = `${formatPercent(assetShare)} · ${formatCompactCurrency(currentAssets)}`;
+  $("#overview-noncurrent-assets").textContent = `${formatPercent(100 - assetShare)} · ${formatCompactCurrency(noncurrentAssets)}`;
+  $("#overview-capital-total").textContent = formatCompactCurrency(totalCapital);
+  $("#overview-capital-liabilities").textContent = `${formatPercent(liabilityShare)} · ${formatCompactCurrency(liabilities)}`;
+  $("#overview-capital-equity").textContent = `${formatPercent(100 - liabilityShare)} · ${formatCompactCurrency(equity)}`;
+  $("#overview-liabilities-value").textContent = formatCompactCurrency(liabilities);
+  $("#overview-liabilities-note").textContent = totalAssets > 0
+    ? `${formatPercent(liabilities / totalAssets * 100)} do ativo total (demo)`
+    : "Percentual indisponível (demo)";
+}
+
+function renderDashboardMetrics(periods) {
+  const latest = periods[periods.length - 1];
+  if (!latest) return;
+  const previous = periods[periods.length - 2];
+  const ebitda = calculateEbitda(latest);
+  const ebitdaMargin = latest.revenue > 0 ? ebitda / latest.revenue * 100 : null;
+  const monthlyReserve = Number(latest.cost_of_goods_sold)
+    + Number(latest.variable_expenses)
+    + Number(latest.fixed_expenses);
+  const cashCoverage = monthlyReserve > 0 ? latest.cash_balance / monthlyReserve : null;
+  const revenueChange = previous && previous.revenue > 0
+    ? (latest.revenue - previous.revenue) / previous.revenue * 100
+    : null;
+  const marginDifference = ebitdaMargin == null ? null : ebitdaMargin - 12;
+
+  $("#overview-cash-value").textContent = formatCompactCurrency(latest.cash_balance);
+  $("#overview-cash-note").textContent = cashCoverage == null
+    ? "Cobertura de despesas indisponível (demo)"
+    : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(cashCoverage)} mês(es) de despesas operacionais (demo)`;
+  $("#overview-revenue-value").textContent = formatCompactCurrency(latest.revenue);
+  $("#overview-revenue-change").textContent = revenueChange == null
+    ? "—"
+    : `${revenueChange >= 0 ? "+" : ""}${formatPercent(revenueChange)}`;
+  $("#overview-revenue-change").classList.toggle("positive", revenueChange == null || revenueChange >= 0);
+  $("#overview-revenue-change").classList.toggle("negative", revenueChange != null && revenueChange < 0);
+  $("#overview-margin-value").textContent = formatPercent(ebitdaMargin);
+  $("#overview-margin-note").textContent = marginDifference == null
+    ? "Benchmark demonstrativo indisponível"
+    : `${marginDifference >= 0 ? "+" : ""}${formatPercent(marginDifference)} p.p. vs. benchmark fictício de 12%`;
+}
+
+function renderDashboardCashChart(periods) {
+  overviewCashPeriods = periods;
+  const rangeCounts = { "1M": 2, "3M": 4, "6M": 7, "1A": 12 };
+  const allPoints = periods.filter(period => Number.isFinite(Number(period.cash_balance)));
+  const pointCount = rangeCounts[overviewCashRange] || allPoints.length;
+  const points = allPoints.slice(-pointCount);
+  const chart = $("#overview-cash-chart");
+  const emptyState = $("#overview-cash-empty");
+  $$("[data-range]").forEach(button => button.classList.toggle("selected", button.dataset.range === overviewCashRange));
+
+  if (!allPoints.length) {
+    chart.hidden = true;
+    emptyState.hidden = false;
+    $("#overview-chart-value").textContent = "—";
+    $("#overview-chart-change").textContent = "Variação indisponível";
+    return;
+  }
+
+  const latest = allPoints[allPoints.length - 1];
+  $("#overview-chart-value").textContent = formatCompactCurrency(latest.cash_balance);
+  if (points.length < 2) {
+    chart.hidden = true;
+    emptyState.hidden = false;
+    $("#overview-chart-change").textContent = "Variação indisponível";
+    return;
+  }
+
+  chart.hidden = false;
+  emptyState.hidden = true;
+  const firstValue = Number(points[0].cash_balance);
+  const latestValue = Number(points[points.length - 1].cash_balance);
+  const percentageChange = firstValue === 0 ? null : (latestValue - firstValue) / Math.abs(firstValue) * 100;
+  const firstPeriod = formatPeriod(points[0].period_start);
+  const lastPeriod = formatPeriod(points[points.length - 1].period_start);
+  const rangeLabel = overviewCashRange === "1M"
+    ? "vs. mês anterior"
+    : `entre ${firstPeriod} e ${lastPeriod}`;
+  $("#overview-chart-change").textContent = percentageChange == null
+    ? "Variação indisponível"
+    : `${percentageChange >= 0 ? "↗" : "↘"} ${formatPercent(Math.abs(percentageChange))} ${rangeLabel}`;
+
+  const values = points.map(period => Number(period.cash_balance));
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  const padding = Math.max((maximum - minimum) * 0.1, 50000);
+  let axisMinimum = Math.floor((minimum - padding) / 100000) * 100000;
+  let axisMaximum = Math.ceil((maximum + padding) / 100000) * 100000;
+  if (axisMaximum <= axisMinimum) axisMaximum = axisMinimum + 100000;
+  const coordinates = values.map((value, index) => ({
+    x: 42 + (points.length === 1 ? 324 : index * 648 / (points.length - 1)),
+    y: 151 - (value - axisMinimum) / (axisMaximum - axisMinimum) * 126
+  }));
+  const linePath = coordinates.map((point, index) =>
+    `${index ? "L" : "M"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+  ).join(" ");
+  const areaPath = `M${coordinates[0].x.toFixed(1)} 151 ${linePath.slice(1)} L${coordinates[coordinates.length - 1].x.toFixed(1)} 151 Z`;
+  const grid = [25, 67, 109, 151].map((y, index) => {
+    const value = axisMaximum - (axisMaximum - axisMinimum) * index / 3;
+    const label = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 0 }).format(value);
+    return `<line class="chart-grid" x1="42" y1="${y}" x2="690" y2="${y}"/><text class="chart-label" x="0" y="${y + 3}">${escapeHTML(label)}</text>`;
+  }).join("");
+  const labelStep = Math.max(1, Math.ceil(points.length / 6));
+  const monthLabels = points.map((period, index) => {
+    if (index % labelStep !== 0 && index !== points.length - 1) return "";
+    const x = Math.min(690, Math.max(42, coordinates[index].x));
+    const month = formatPeriod(period.period_start).split(" ")[0].replace(/\.$/, "");
+    return `<text class="chart-label" text-anchor="middle" x="${x.toFixed(1)}" y="172">${escapeHTML(month)}</text>`;
+  }).join("");
+
+  chart.innerHTML = `<defs><linearGradient id="overview-area-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#6eae87" stop-opacity=".2"/><stop offset="100%" stop-color="#6eae87" stop-opacity="0"/></linearGradient></defs>${grid}<path class="chart-area" d="${areaPath}"/><path class="chart-line" d="${linePath}"/>${monthLabels}`;
+}
+
+function renderDashboardOverview() {
+  const periods = createDemoFinancialData().periods;
+  const latest = periods[periods.length - 1];
+  const ltmEbitda = periods.reduce((total, period) => total + calculateEbitda(period), 0);
+  overviewCashRange = ["1M", "3M", "6M", "1A", "Tudo"].includes(overviewCashRange)
+    ? overviewCashRange
+    : "1A";
+  renderHealthAndAlerts(latest, periods.length === 12, ltmEbitda, true);
+  renderDashboardMetrics(periods);
+  renderDashboardCashChart(periods);
+  renderDashboardBalanceCharts();
+  renderDashboardInsights();
 }
 
 function renderFinancialAnalysis() {
@@ -1011,7 +1251,7 @@ const pages = {
   companies: "Empresas",
   client: "Minha empresa",
   "financial-analysis": "Diagnóstico financeiro",
-  accounting: "Contabilidade",
+  accounting: "Balanço patrimonial",
   investments: "Investimentos",
   economy: "Economia",
   reports: "Relatórios"
@@ -1032,6 +1272,7 @@ function navigate(page) {
   $("#global-search").value = "";
   renderCompanies();
   if (page === "financial-analysis") loadFinancialAnalysis();
+  if (page === "dashboard" && currentRole === "admin") renderDashboardOverview();
   $("#client-home-link").hidden = currentRole !== "company_owner";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1051,6 +1292,9 @@ async function loadCompanies() {
   companies = (data || []).map(normalizeCompany);
   configureFinancialCompanySelect();
   renderCompanies($("#global-search").value);
+  if ($("#page-dashboard").classList.contains("visible")) {
+    renderDashboardOverview();
+  }
   if ($("#page-financial-analysis").classList.contains("visible")) {
     await loadFinancialAnalysis(getFinancialCompanyId());
   }
@@ -1148,6 +1392,8 @@ async function handleSession(session) {
     debtMaturities = [];
     isDemoFinancialAnalysis = false;
     activeFinancialCompanyId = null;
+    activeFinancialAlerts = [];
+    updateAlertNotification([]);
     appShell.hidden = true;
     appShell.classList.remove("client-mode");
     $("#client-home-link").hidden = true;
@@ -1251,8 +1497,8 @@ function closeModal() {
 
 function exportCompanies() {
   const csvRows = [
-    ["Empresa", "Setor", "Faturamento mensal", "EBITDA", "Status"],
-    ...companies.map(({ name, sector, revenue, ebitda, status }) => [name, sector, revenue, ebitda, status])
+    ["Empresa", "Setor", "Faturamento mensal", "EBITDA", "Margem EBITDA", "Status"],
+    ...companies.map(({ name, sector, revenue, ebitda, margin, status }) => [name, sector, revenue, ebitda, formatPercent(margin), status])
   ];
   const csv = "\uFEFF" + csvRows.map(row => row.map(escapeCSVCell).join(";")).join("\r\n");
   const link = document.createElement("a");
@@ -1294,6 +1540,17 @@ $("#refresh-financial-analysis").addEventListener("click", async event => {
   button.disabled = false;
 });
 $("#client-home-link").addEventListener("click", () => navigate("client"));
+$("#app-shell").addEventListener("click", event => {
+  const button = event.target instanceof Element
+    ? event.target.closest("[data-missing-company]")
+    : null;
+  if (!button) return;
+  const company = companies.find(item => item.id === button.dataset.missingCompany);
+  if (!company) return;
+  activeFinancialCompanyId = company.id;
+  $("#financial-company-select").value = company.id;
+  navigate("financial-analysis");
+});
 $("#download-financial-template").addEventListener("click", downloadFinancialTemplate);
 $("#download-forecast-template").addEventListener("click", downloadForecastTemplate);
 $("#download-debt-template").addEventListener("click", downloadDebtTemplate);
@@ -1312,7 +1569,12 @@ $("#refresh-admin-accounts").addEventListener("click", async event => {
   button.textContent = "Atualizar lista";
 });
 
-$("#notification-button").addEventListener("click", () => showToast("Você não tem novas notificações."));
+$("#notification-button").addEventListener("click", () => {
+  const message = activeFinancialAlerts.length
+    ? activeFinancialAlerts.map(alert => alert.title).join("; ")
+    : "Nenhum alerta automático identificado.";
+  showToast(message);
+});
 $("#sign-out").addEventListener("click", async () => {
   const { error } = await supabase.auth.signOut();
   if (error) {
@@ -1528,8 +1790,8 @@ $("#company-form").addEventListener("submit", async event => {
 });
 
 $$("[data-range]").forEach(button => button.addEventListener("click", () => {
-  $$("[data-range]").forEach(tab => tab.classList.toggle("selected", tab === button));
-  showToast(`Período ${button.dataset.range} selecionado (dados demonstrativos).`);
+  overviewCashRange = button.dataset.range;
+  renderDashboardCashChart(overviewCashPeriods);
 }));
 
 supabase.auth.onAuthStateChange((event, session) => {
