@@ -124,6 +124,10 @@
     .client-avatar { display: grid; place-items: center; width: 27px; height: 27px; flex: 0 0 27px; border-radius: 50%; background: #eaf1ec; color: #4a7159; font-size: 9px; font-weight: 700; }
     .client-name { color: #2c3931; font-weight: 600; }
     .client-email { margin-top: 3px; color: #a0a9a4; font-size: 9px; }
+    .admin-account-controls { display: flex; justify-content: flex-end; margin-top: 14px; }
+    .admin-account-search { min-width: 260px; }
+    .admin-account-table-wrap { overflow-x: auto; }
+    .admin-account-table { min-width: 680px; }
     .status { display: inline-flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 20px; background: #edf6ef; color: #438059; font-size: 9px; white-space: nowrap; }
     .status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
     .status.review { background: #fff5e7; color: #b17c30; }
@@ -252,6 +256,7 @@
       .client-table th, .client-table td { padding-right: 5px; padding-left: 5px; }
       .client-info { min-width: 0; }
       .client-email { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+      .admin-account-search { min-width: 0; width: 100%; }
       .client-mode .app { padding-bottom: 0; }
       .client-mode .sidebar { display: none; }
       .client-mode .main { width: 100%; }

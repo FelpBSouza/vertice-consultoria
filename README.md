@@ -18,6 +18,7 @@ Aplicação estática para consultoria financeira empresarial, hospedada no GitH
 4. Convide o administrador em Authentication → Users. O trigger atribui o perfil `admin` ao e-mail autorizado; o link leva ao app para definir a senha.
 5. Se o usuário já estiver na tela de login, use **Esqueci minha senha** para receber um link de recuperação e criar a senha.
 6. Para permitir contas de clientes, habilite inscrições por e-mail e confirmação de e-mail em Auth → Providers → Email. As migrations criam a empresa do cliente após a confirmação e limitam o acesso aos dados associados à conta.
+7. Administradores podem consultar a lista de contas de clientes, empresas informadas e situação da confirmação do e-mail na seção **Contas**. Essa seção não altera nem bloqueia acessos.
 
 `js/config.js` contém somente a chave pública `publishable`, apropriada para o navegador. Nunca coloque uma chave `service_role` ou outra chave secreta no repositório. O acesso aos dados é protegido por RLS no banco.
 

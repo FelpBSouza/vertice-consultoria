@@ -50,6 +50,7 @@
       <p class="nav-label">Workspace</p>
       <nav class="nav" aria-label="Navegação principal">
         <button class="active" data-page="dashboard" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Visão geral</button>
+        <button data-page="admin-accounts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19v-1.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V19M16 5.2a3.2 3.2 0 0 1 0 6.2M17 13.2a4.8 4.8 0 0 1 3.5 4.6V19"/></svg>Contas</button>
         <button data-page="companies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V6.5L12 3l8 3.5V20H4Z"/><path d="M8 9h1M15 9h1M8 13h1M15 13h1M10 20v-3h4v3"/></svg>Empresas<span class="nav-count">5</span></button>
         <button data-page="accounting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h12a2 2 0 0 1 2 2v15H4v-15a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>Contabilidade</button>
         <button data-page="investments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/><path d="m5 7 4-3 4 2 6-4"/></svg>Investimentos</button>
@@ -112,6 +113,16 @@
           <div class="page-heading"><div><div class="eyebrow">Carteira de consultoria</div><h1>Empresas</h1><div class="subheading">Cadastros e visão inicial dos negócios atendidos.</div></div><button class="btn btn-primary" data-add-company><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nova empresa</button></div>
           <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Empresas demonstrativas; os novos cadastros são salvos no Supabase.</span></div>
           <article class="card clients-panel"><div class="panel-heading"><div><div class="panel-title">Negócios acompanhados</div><div class="panel-caption"><span id="company-count">5</span> resultados</div></div><button class="btn" data-export>Exportar lista</button></div><table class="client-table"><thead><tr><th>EMPRESA</th><th>SETOR</th><th>FATURAMENTO MENSAL</th><th>EBITDA</th><th>STATUS</th></tr></thead><tbody id="all-company-rows"></tbody></table></article>
+        </section>
+
+        <section class="page-section" id="page-admin-accounts">
+          <div class="page-heading"><div><div class="eyebrow">Administração</div><h1>Contas de clientes</h1><div class="subheading">Consulte as empresas cadastradas e o status de confirmação do e-mail.</div></div></div>
+          <div class="demo-note"><span>Consulta somente. O acesso do cliente é liberado após confirmar o e-mail; esta área não altera nem bloqueia contas.</span></div>
+          <article class="card clients-panel">
+            <div class="panel-heading"><div><div class="panel-title">Clientes cadastrados</div><div class="panel-caption"><span id="admin-account-count">0</span> resultados</div></div><button class="btn" id="refresh-admin-accounts" type="button">Atualizar lista</button></div>
+            <div class="admin-account-controls"><input class="admin-account-search" id="admin-account-search" type="search" placeholder="Buscar por empresa ou e-mail..." aria-label="Buscar contas de clientes"></div>
+            <div class="admin-account-table-wrap"><table class="client-table admin-account-table"><thead><tr><th>EMPRESA</th><th>E-MAIL DA CONTA</th><th>SETOR</th><th>CONFIRMAÇÃO</th><th>CADASTRO</th></tr></thead><tbody id="admin-account-rows"></tbody></table></div>
+          </article>
         </section>
 
         <section class="page-section" id="page-accounting">

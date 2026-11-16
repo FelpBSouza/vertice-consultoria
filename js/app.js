@@ -31,6 +31,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 let companies = [];
+let adminAccounts = [];
 let toastTimer;
 let sessionRequest = 0;
 let currentRole = null;
@@ -84,6 +85,45 @@ function renderCompanies(query = "") {
   $(".nav-count", $('[data-page="companies"]')).textContent = companies.length;
 }
 
+function formatDate(value) {
+  if (!value) return "—";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "—";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(timestamp);
+}
+
+function renderAdminAccounts(query = "") {
+  const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+  const filtered = adminAccounts.filter(account =>
+    `${account.companyName} ${account.companySector} ${account.email}`
+      .toLocaleLowerCase("pt-BR")
+      .includes(normalizedQuery)
+  );
+  const rows = filtered.length
+    ? filtered.map(account => {
+      const companyInitials = account.companyName
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(part => part[0])
+        .join("")
+        .toLocaleUpperCase("pt-BR");
+      const confirmation = account.emailConfirmedAt
+        ? `<span class="company-status">Confirmado</span>`
+        : `<span class="company-status review">Pendente</span>`;
+      return `<tr>
+        <td><div class="client-info"><span class="client-avatar">${escapeHTML(companyInitials)}</span><div><div class="client-name">${escapeHTML(account.companyName)}</div><div class="client-email">${account.company ? "Empresa vinculada" : "Cadastro recebido"}</div></div></div></td>
+        <td>${escapeHTML(account.email)}</td>
+        <td>${escapeHTML(account.companySector || "—")}</td>
+        <td>${confirmation}</td>
+        <td>${escapeHTML(formatDate(account.createdAt))}</td>
+      </tr>`;
+    }).join("")
+    : `<tr><td colspan="5"><div class="empty-state">${normalizedQuery ? "Nenhuma conta encontrada." : "Nenhuma conta de cliente cadastrada."}</div></td></tr>`;
+
+  $("#admin-account-rows").innerHTML = rows;
+  $("#admin-account-count").textContent = filtered.length;
+}
+
 function isReviewNeeded(company) {
   return company.status === "Dados pendentes" || company.status === "Revisão necessária";
 }
@@ -106,6 +146,7 @@ function escapeCSVCell(value) {
 
 const pages = {
   dashboard: "Visão geral",
+  "admin-accounts": "Contas de clientes",
   companies: "Empresas",
   accounting: "Contabilidade",
   investments: "Investimentos",
@@ -114,7 +155,8 @@ const pages = {
 };
 
 function navigate(page) {
-  if (!pages[page] || (currentRole !== "admin" && page !== "client")) return;
+  if (!pages[page] || !["admin", "company_owner"].includes(currentRole)) return;
+  if ((currentRole === "admin" && page === "client") || (currentRole === "company_owner" && page !== "client")) return;
   $$(".nav button").forEach(button => {
     const active = button.dataset.page === page;
     button.classList.toggle("active", active);
@@ -142,6 +184,43 @@ async function loadCompanies() {
 
   companies = data.map(normalizeCompany);
   renderCompanies($("#global-search").value);
+  return true;
+}
+
+async function loadAdminAccounts() {
+  const [profilesResult, membershipsResult] = await Promise.all([
+    supabase
+      .from("vertice_profiles")
+      .select("id, email, created_at, email_confirmed_at, company_name, company_sector")
+      .eq("role", "company_owner")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vertice_company_memberships")
+      .select("user_id, company:vertice_companies(name, sector)")
+  ]);
+
+  if (profilesResult.error || membershipsResult.error) {
+    const error = profilesResult.error || membershipsResult.error;
+    console.error("Erro ao carregar contas de clientes:", error);
+    showToast("Não foi possível carregar as contas de clientes.");
+    return false;
+  }
+
+  const companyByUser = new Map(
+    membershipsResult.data.map(membership => [membership.user_id, membership.company])
+  );
+  adminAccounts = profilesResult.data.map(profile => {
+    const company = companyByUser.get(profile.id);
+    return {
+      email: profile.email,
+      createdAt: profile.created_at,
+      emailConfirmedAt: profile.email_confirmed_at,
+      company,
+      companyName: company?.name || profile.company_name || "Empresa não informada",
+      companySector: company?.sector || profile.company_sector || ""
+    };
+  });
+  renderAdminAccounts($("#admin-account-search").value);
   return true;
 }
 
@@ -193,6 +272,7 @@ async function handleSession(session) {
   if (!session) {
     currentRole = null;
     companies = [];
+    adminAccounts = [];
     appShell.hidden = true;
     appShell.classList.remove("client-mode");
     authScreen.hidden = false;
@@ -230,6 +310,7 @@ async function handleSession(session) {
     console.error("Erro ao verificar perfil:", error);
     currentRole = null;
     companies = [];
+    adminAccounts = [];
     appShell.classList.remove("client-mode");
     appShell.hidden = true;
     authScreen.hidden = false;
@@ -273,8 +354,11 @@ async function handleSession(session) {
   } else {
     navigate("dashboard");
   }
-  const companiesLoaded = await loadCompanies();
-  if (request !== sessionRequest || !companiesLoaded) return;
+  const [companiesLoaded, adminAccountsLoaded] = await Promise.all([
+    loadCompanies(),
+    isAdmin ? loadAdminAccounts() : Promise.resolve(true)
+  ]);
+  if (request !== sessionRequest || !companiesLoaded || !adminAccountsLoaded) return;
   if (isCompanyOwner) renderClientWorkspace();
 }
 
@@ -316,6 +400,16 @@ $("#global-search").addEventListener("input", event => {
   if (!$("#page-companies").classList.contains("visible")) navigate("companies");
   $("#global-search").value = query;
   renderCompanies(query);
+});
+
+$("#admin-account-search").addEventListener("input", event => renderAdminAccounts(event.target.value));
+$("#refresh-admin-accounts").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  button.textContent = "Atualizando...";
+  await loadAdminAccounts();
+  button.disabled = false;
+  button.textContent = "Atualizar lista";
 });
 
 $("#notification-button").addEventListener("click", () => showToast("Você não tem novas notificações."));
