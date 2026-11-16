@@ -30,11 +30,13 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0
 });
 
+const DEMO_COMPANY_NAME = "Orla Café e Alimentos Ltda.";
 let companies = [];
 let adminAccounts = [];
 let financialPeriods = [];
 let cashForecasts = [];
 let debtMaturities = [];
+let isDemoFinancialAnalysis = false;
 let activeFinancialCompanyId = null;
 let toastTimer;
 let sessionRequest = 0;
@@ -308,9 +310,10 @@ function getFinancialCompanyId() {
 
 function configureFinancialCompanySelect() {
   const select = $("#financial-company-select");
+  const demoCompanyId = companies.find(company => company.name === DEMO_COMPANY_NAME)?.id;
   const currentValue = currentRole === "company_owner"
     ? companies[0]?.id
-    : activeFinancialCompanyId || select.value;
+    : activeFinancialCompanyId || select.value || demoCompanyId;
   select.replaceChildren();
   companies.forEach(company => {
     const option = document.createElement("option");
@@ -383,6 +386,48 @@ function calculateNetIncome(period) {
     - Number(period.depreciation_expenses)
     - Number(period.financial_expenses)
     - Number(period.tax_expenses);
+}
+
+function createDemoFinancialData() {
+  const now = new Date();
+  const latestPeriod = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+    .toISOString()
+    .slice(0, 10);
+  const roundAmount = value => Math.round(value * 100) / 100;
+  const periods = Array.from({ length: 12 }, (_, index) => {
+    const isLatest = index === 11;
+    const revenue = isLatest ? 720000 : roundAmount((8400000 - 720000) / 11);
+    const costOfGoodsSold = isLatest ? 400000 : roundAmount((4700000 - 400000) / 11);
+    return {
+      period_start: monthOffset(latestPeriod, index - 11),
+      revenue,
+      cost_of_goods_sold: costOfGoodsSold,
+      purchases: costOfGoodsSold,
+      variable_expenses: isLatest ? 84000 : 80000,
+      fixed_expenses: isLatest ? 120000 : roundAmount((2350000 - 204000 - 880000) / 11),
+      accounts_receivable: isLatest ? 840000 : roundAmount(revenue * 1.15),
+      inventory: isLatest ? 500000 : roundAmount(costOfGoodsSold * 1.25),
+      supplier_payables: isLatest ? 350000 : roundAmount(costOfGoodsSold * 0.875),
+      gross_debt: roundAmount(2800000 - index * (200000 / 11)),
+      cash_balance: roundAmount(650000 + index * (170000 / 11)),
+      depreciation_expenses: isLatest ? 30000 : 20000,
+      financial_expenses: isLatest ? 20000 : roundAmount(160000 / 11),
+      tax_expenses: 20000
+    };
+  });
+  const seasonality = [0.94, 0.96, 1, 1.04, 1.02, 1.05, 1.01, 1.03, 1.06, 1.08, 1.12, 1.1];
+  const latest = periods[periods.length - 1];
+  const forecasts = seasonality.map((factor, index) => ({
+    period_start: monthOffset(latest.period_start, index + 1),
+    expected_inflows: roundAmount(760000 * factor),
+    expected_outflows: roundAmount(730000 * factor)
+  }));
+  const monthlyMaturities = [35000, 35000, 35000, 35000, 35000, 250000, 35000, 35000, 35000, 35000, 35000, 35000];
+  const maturities = monthlyMaturities.map((scheduled_amount, index) => ({
+    period_start: monthOffset(latest.period_start, index + 1),
+    scheduled_amount
+  }));
+  return { periods, forecasts, maturities };
 }
 
 function parseDebtMaturityCsv(text) {
@@ -695,6 +740,20 @@ function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda) {
 
 function renderFinancialAnalysis() {
   const latest = financialPeriods[financialPeriods.length - 1] || null;
+  $("#financial-data-mode").hidden = !isDemoFinancialAnalysis;
+  $("#financial-demo-notice").hidden = !isDemoFinancialAnalysis;
+  $$(".financial-import-grid button, .financial-import-grid input").forEach(control => {
+    if (control.id.startsWith("import-")) {
+      const kind = control.id.slice("import-".length, -"-csv".length);
+      control.disabled = isDemoFinancialAnalysis || !$("#" + kind + "-csv-file").files[0];
+    } else {
+      control.disabled = isDemoFinancialAnalysis;
+    }
+  });
+  $$(".financial-import-grid label[for]").forEach(label => {
+    label.classList.toggle("disabled", isDemoFinancialAnalysis);
+    label.setAttribute("aria-disabled", String(isDemoFinancialAnalysis));
+  });
   const previousPeriod = latest ? monthOffset(latest.period_start, -1) : null;
   const previous = previousPeriod
     ? financialPeriods.find(period => period.period_start === previousPeriod)
@@ -764,6 +823,7 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
   financialPeriods = [];
   cashForecasts = [];
   debtMaturities = [];
+  isDemoFinancialAnalysis = false;
   if (!companyId) {
     renderFinancialAnalysis();
     return true;
@@ -805,32 +865,50 @@ async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
     return false;
   }
 
-  financialPeriods = (periodsResult.data || []).map(period => ({
-    ...period,
-    period_start: period.period_start,
-    revenue: Number(period.revenue),
-    cost_of_goods_sold: Number(period.cost_of_goods_sold),
-    purchases: Number(period.purchases),
-    variable_expenses: Number(period.variable_expenses),
-    fixed_expenses: Number(period.fixed_expenses),
-    accounts_receivable: Number(period.accounts_receivable),
-    inventory: Number(period.inventory),
-    supplier_payables: Number(period.supplier_payables),
-    gross_debt: Number(period.gross_debt),
-    cash_balance: Number(period.cash_balance),
-    depreciation_expenses: period.depreciation_expenses == null ? null : Number(period.depreciation_expenses),
-    financial_expenses: period.financial_expenses == null ? null : Number(period.financial_expenses),
-    tax_expenses: period.tax_expenses == null ? null : Number(period.tax_expenses)
-  }));
-  cashForecasts = (forecastsResult.data || []).map(forecast => ({
-    ...forecast,
-    expected_inflows: Number(forecast.expected_inflows),
-    expected_outflows: Number(forecast.expected_outflows)
-  }));
-  debtMaturities = (maturitiesResult.data || []).map(maturity => ({
-    ...maturity,
-    scheduled_amount: Number(maturity.scheduled_amount)
-  }));
+  const storedPeriods = periodsResult.data || [];
+  const storedForecasts = forecastsResult.data || [];
+  const storedMaturities = maturitiesResult.data || [];
+  const selectedCompany = companies.find(company => company.id === companyId);
+  if (
+    currentRole === "admin"
+    && selectedCompany?.name === DEMO_COMPANY_NAME
+    && storedPeriods.length === 0
+    && storedForecasts.length === 0
+    && storedMaturities.length === 0
+  ) {
+    const demoData = createDemoFinancialData();
+    financialPeriods = demoData.periods;
+    cashForecasts = demoData.forecasts;
+    debtMaturities = demoData.maturities;
+    isDemoFinancialAnalysis = true;
+  } else {
+    financialPeriods = storedPeriods.map(period => ({
+      ...period,
+      period_start: period.period_start,
+      revenue: Number(period.revenue),
+      cost_of_goods_sold: Number(period.cost_of_goods_sold),
+      purchases: Number(period.purchases),
+      variable_expenses: Number(period.variable_expenses),
+      fixed_expenses: Number(period.fixed_expenses),
+      accounts_receivable: Number(period.accounts_receivable),
+      inventory: Number(period.inventory),
+      supplier_payables: Number(period.supplier_payables),
+      gross_debt: Number(period.gross_debt),
+      cash_balance: Number(period.cash_balance),
+      depreciation_expenses: period.depreciation_expenses == null ? null : Number(period.depreciation_expenses),
+      financial_expenses: period.financial_expenses == null ? null : Number(period.financial_expenses),
+      tax_expenses: period.tax_expenses == null ? null : Number(period.tax_expenses)
+    }));
+    cashForecasts = storedForecasts.map(forecast => ({
+      ...forecast,
+      expected_inflows: Number(forecast.expected_inflows),
+      expected_outflows: Number(forecast.expected_outflows)
+    }));
+    debtMaturities = storedMaturities.map(maturity => ({
+      ...maturity,
+      scheduled_amount: Number(maturity.scheduled_amount)
+    }));
+  }
   renderFinancialAnalysis();
   return true;
 }
@@ -846,7 +924,7 @@ function bindCsvFileInput(kind) {
   const importButton = $(`#import-${kind}-csv`);
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
-    importButton.disabled = !file;
+    importButton.disabled = isDemoFinancialAnalysis || !file;
     setImportFileStatus(kind, file ? file.name : "Nenhum arquivo selecionado.");
   });
 }
@@ -858,6 +936,10 @@ async function importFinancialCsv(kind) {
   const importButton = $(`#import-${kind}-csv`);
   const file = fileInput.files[0];
   const companyId = getFinancialCompanyId();
+  if (isDemoFinancialAnalysis) {
+    showToast("Selecione uma empresa real para importar dados financeiros.");
+    return;
+  }
   if (!file || !companyId) {
     showToast("Selecione uma empresa e um arquivo CSV.");
     return;
@@ -917,7 +999,7 @@ async function importFinancialCsv(kind) {
     setImportFileStatus(kind, error instanceof Error ? error.message : "Não foi possível importar o arquivo.", true);
   } finally {
     importButton.textContent = originalLabel;
-    importButton.disabled = !fileInput.files[0];
+    importButton.disabled = isDemoFinancialAnalysis || !fileInput.files[0];
   }
 }
 
@@ -1061,6 +1143,8 @@ async function handleSession(session) {
     adminAccounts = [];
     financialPeriods = [];
     cashForecasts = [];
+    debtMaturities = [];
+    isDemoFinancialAnalysis = false;
     activeFinancialCompanyId = null;
     appShell.hidden = true;
     appShell.classList.remove("client-mode");

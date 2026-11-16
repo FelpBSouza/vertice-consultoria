@@ -24,7 +24,7 @@ Aplicação estática para consultoria financeira empresarial, hospedada no GitH
 
 ## Dados demonstrativos
 
-As empresas seed e os indicadores financeiros do painel são fictícios. O diagnóstico financeiro usa apenas os dados mensais importados para a empresa selecionada; não realiza escrituração contábil nem produz recomendações automáticas de investimento.
+As empresas seed e os indicadores financeiros do painel são fictícios. No Diagnóstico, a empresa seed **Orla Café e Alimentos Ltda.** recebe uma demonstração local com base nos números da Visão geral e da DRE quando ainda não possui dados financeiros importados. Essa demonstração não é gravada no Supabase e os imports ficam desativados nesse modo. Outras empresas e contas de clientes só mostram dados persistidos/importados; não recebem dados de demonstração automaticamente. O diagnóstico não realiza escrituração contábil nem produz recomendações automáticas de investimento.
 
 ## Diagnóstico financeiro e importação CSV
 
