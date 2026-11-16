@@ -727,7 +727,7 @@ function renderHealthAndAlerts(latest, hasFullYear, ltmEbitda, updateOverview = 
   if (!latest) {
     scoreElement.textContent = "—";
     scoreCircle.className = "health-score";
-    $("#health-score-caption").textContent = "Aguardando dados";
+    $("#health-score-caption").textContent = "Aguardando dados da empresa";
     pillarsElement.innerHTML = "";
     alertsElement.innerHTML = "";
     if (!updateOverview) updateAlertNotification([]);

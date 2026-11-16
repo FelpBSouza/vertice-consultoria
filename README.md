@@ -28,7 +28,13 @@ A página inicial (`/vertice-consultoria/`) é pública. Os botões **Entrar** e
 
 ## Dados demonstrativos
 
-As empresas seed e os indicadores financeiros do painel são fictícios. A Visão geral administrativa apresenta a demonstração da empresa **Orla Café e Alimentos Ltda.**; usuários de clientes acessam somente a área da própria empresa. No Diagnóstico, a empresa seed recebe uma demonstração local com base nos números da Visão geral e da DRE quando ainda não possui dados financeiros importados. Essa demonstração não é gravada no Supabase e os imports ficam desativados nesse modo. Outras empresas e contas de clientes só mostram dados persistidos/importados; não recebem dados de demonstração automaticamente. O diagnóstico não realiza escrituração contábil nem produz recomendações automáticas de investimento.
+As empresas seed e os indicadores financeiros do painel são fictícios. A prévia pública mostra o score 90/100 e valores de exemplo; a Visão geral administrativa calcula o mesmo score para **Orla Café e Alimentos Ltda.** Usuários de clientes acessam somente a área da própria empresa e não recebem esses dados fictícios: sem dados financeiros próprios, o score permanece “Aguardando dados da empresa”. No Diagnóstico administrativo, a empresa seed recebe uma demonstração local com base nos números da Visão geral e da DRE quando ainda não possui dados financeiros importados. Essa demonstração não é gravada no Supabase e os imports ficam desativados nesse modo. Outras empresas e contas de clientes só mostram dados persistidos/importados; não recebem dados de demonstração automaticamente. O diagnóstico não realiza escrituração contábil nem produz recomendações automáticas de investimento.
+
+## Revisão de segurança antes de dados reais
+
+As migrations definem RLS para perfis, empresas, vínculos e tabelas financeiras, com políticas de administrador e de vínculo da empresa. Isso descreve o código versionado, mas não confirma que todas as migrations estão aplicadas no projeto Supabase de produção. Antes de usar dados de clientes, confirme a configuração e teste o isolamento com duas contas de empresa distintas. Confirmação de e-mail, políticas de senha, MFA, URLs de redirecionamento, retenção e backups também dependem da configuração do projeto.
+
+Os CSVs são lidos no navegador e seus registros são enviados às tabelas protegidas; os arquivos não são armazenados no Supabase Storage. A aplicação não implementa uma trilha de acesso nem histórico imutável de alterações financeiras; revise também os logs nativos disponíveis no Supabase. Defina a auditoria e sua retenção antes de usar dados reais.
 
 ## Diagnóstico financeiro e importação CSV
 
