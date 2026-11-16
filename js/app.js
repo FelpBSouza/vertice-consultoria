@@ -32,8 +32,12 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 let companies = [];
 let adminAccounts = [];
+let financialPeriods = [];
+let cashForecasts = [];
+let activeFinancialCompanyId = null;
 let toastTimer;
 let sessionRequest = 0;
+let financialRequest = 0;
 let currentRole = null;
 
 function showToast(message) {
@@ -92,6 +96,151 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(timestamp);
 }
 
+function formatPeriod(value) {
+  const [year, month] = value.slice(0, 7).split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC"
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
+function monthOffset(value, offset) {
+  const [year, month] = value.slice(0, 7).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function daysInPeriod(value) {
+  const [year, month] = value.slice(0, 7).split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function formatPercent(value) {
+  return value == null
+    ? "—"
+    : new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value) + "%";
+}
+
+function formatDays(value) {
+  return value == null ? "—" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)} dias`;
+}
+
+function parsePeriod(value, rowNumber) {
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(value.trim());
+  if (!match) throw new Error(`Linha ${rowNumber}: use o período AAAA-MM ou AAAA-MM-DD.`);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = match[3] ? Number(match[3]) : 1;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (year < 1900 || month < 1 || month > 12
+    || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error(`Linha ${rowNumber}: período inválido.`);
+  }
+  return `${match[1]}-${match[2]}-01`;
+}
+
+function parseCsv(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0] || "";
+  const delimiter = firstLine.includes(";") ? ";" : ",";
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (quoted) {
+      if (character === '"' && text[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+    } else if (character === '"' && field.length === 0) {
+      quoted = true;
+    } else if (character === delimiter) {
+      row.push(field);
+      field = "";
+    } else if (character === "\n") {
+      row.push(field.replace(/\r$/, ""));
+      if (row.some(cell => cell.trim())) rows.push(row);
+      row = [];
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+
+  if (quoted) throw new Error("O CSV contém um campo entre aspas sem fechamento.");
+  row.push(field.replace(/\r$/, ""));
+  if (row.some(cell => cell.trim())) rows.push(row);
+  if (rows.length < 2) throw new Error("O CSV precisa conter cabeçalho e pelo menos uma linha de dados.");
+  return rows;
+}
+
+function parseAmount(value, label, rowNumber) {
+  const cleaned = value.trim().replace(/\s/g, "").replace(/^R\$/, "");
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : /^\d{1,3}(?:\.\d{3})+$/.test(cleaned)
+      ? cleaned.replace(/\./g, "")
+      : cleaned;
+  const amount = Number(normalized);
+  if (!normalized || !Number.isFinite(amount) || amount < 0) {
+    throw new Error(`Linha ${rowNumber}: "${label}" deve ser um valor numérico não negativo.`);
+  }
+  return amount;
+}
+
+function parseFinancialCsv(text, forecast = false) {
+  const rows = parseCsv(text);
+  const headers = rows[0].map((header, index) =>
+    header.trim().replace(/^\uFEFF/, "").toLocaleLowerCase("pt-BR")
+  );
+  const columns = forecast
+    ? ["periodo", "entradas_previstas", "saidas_previstas"]
+    : ["periodo", "receita", "cmv", "compras", "despesas_variaveis", "despesas_fixas", "contas_a_receber", "estoque", "fornecedores", "divida_bruta", "caixa"];
+  const indexes = new Map(headers.map((header, index) => [header, index]));
+  const missing = columns.filter(column => !indexes.has(column));
+  if (missing.length) {
+    throw new Error(`Cabeçalho ausente: ${missing.join(", ")}. Baixe o modelo para conferir os nomes.`);
+  }
+
+  const seenPeriods = new Set();
+  return rows.slice(1).map((cells, index) => {
+    const rowNumber = index + 2;
+    const getValue = column => cells[indexes.get(column)] || "";
+    const period = parsePeriod(getValue("periodo"), rowNumber);
+    if (seenPeriods.has(period)) throw new Error(`Linha ${rowNumber}: o período ${period.slice(0, 7)} está duplicado.`);
+    seenPeriods.add(period);
+
+    if (forecast) {
+      return {
+        period_start: period,
+        expected_inflows: parseAmount(getValue("entradas_previstas"), "entradas_previstas", rowNumber),
+        expected_outflows: parseAmount(getValue("saidas_previstas"), "saidas_previstas", rowNumber)
+      };
+    }
+
+    return {
+      period_start: period,
+      revenue: parseAmount(getValue("receita"), "receita", rowNumber),
+      cost_of_goods_sold: parseAmount(getValue("cmv"), "cmv", rowNumber),
+      purchases: parseAmount(getValue("compras"), "compras", rowNumber),
+      variable_expenses: parseAmount(getValue("despesas_variaveis"), "despesas_variaveis", rowNumber),
+      fixed_expenses: parseAmount(getValue("despesas_fixas"), "despesas_fixas", rowNumber),
+      accounts_receivable: parseAmount(getValue("contas_a_receber"), "contas_a_receber", rowNumber),
+      inventory: parseAmount(getValue("estoque"), "estoque", rowNumber),
+      supplier_payables: parseAmount(getValue("fornecedores"), "fornecedores", rowNumber),
+      gross_debt: parseAmount(getValue("divida_bruta"), "divida_bruta", rowNumber),
+      cash_balance: parseAmount(getValue("caixa"), "caixa", rowNumber)
+    };
+  });
+}
+
 function renderAdminAccounts(query = "") {
   const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
   const filtered = adminAccounts.filter(account =>
@@ -144,10 +293,328 @@ function escapeCSVCell(value) {
   return `"${safeCell.replace(/"/g, '""')}"`;
 }
 
+function getFinancialCompanyId() {
+  if (currentRole === "company_owner") return companies[0]?.id || null;
+  return $("#financial-company-select").value || null;
+}
+
+function configureFinancialCompanySelect() {
+  const select = $("#financial-company-select");
+  const currentValue = currentRole === "company_owner"
+    ? companies[0]?.id
+    : activeFinancialCompanyId || select.value;
+  select.replaceChildren();
+  companies.forEach(company => {
+    const option = document.createElement("option");
+    option.value = company.id;
+    option.textContent = company.name;
+    select.append(option);
+  });
+  select.disabled = currentRole === "company_owner" || companies.length === 0;
+  select.value = companies.some(company => company.id === currentValue)
+    ? currentValue
+    : companies[0]?.id || "";
+  activeFinancialCompanyId = select.value || null;
+  $("#financial-company-field").hidden = currentRole === "company_owner";
+}
+
+function downloadCsv(filename, rows) {
+  const csv = `\uFEFF${rows.map(row => row.map(escapeCSVCell).join(";")).join("\r\n")}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function downloadFinancialTemplate() {
+  downloadCsv("vertice-dados-mensais.csv", [
+    ["periodo", "receita", "cmv", "compras", "despesas_variaveis", "despesas_fixas", "contas_a_receber", "estoque", "fornecedores", "divida_bruta", "caixa"]
+  ]);
+}
+
+function downloadForecastTemplate() {
+  const latest = financialPeriods[financialPeriods.length - 1];
+  if (!latest) {
+    showToast("Importe primeiro ao menos um período realizado.");
+    return;
+  }
+  const rows = [["periodo", "entradas_previstas", "saidas_previstas"]];
+  for (let month = 1; month <= 6; month += 1) {
+    rows.push([monthOffset(latest.period_start, month).slice(0, 7), "", ""]);
+  }
+  downloadCsv("vertice-previsao-caixa.csv", rows);
+}
+
+function calculateEbitda(period) {
+  return Number(period.revenue)
+    - Number(period.cost_of_goods_sold)
+    - Number(period.variable_expenses)
+    - Number(period.fixed_expenses);
+}
+
+function renderDreAnalysis(latest, previous) {
+  const rows = $("#dre-analysis-rows");
+  if (!latest) {
+    rows.innerHTML = `<tr><td colspan="4"><div class="empty-state">Importe dados mensais para visualizar a análise da DRE.</div></td></tr>`;
+    $("#dre-current-period").textContent = "MÊS ATUAL";
+    return;
+  }
+
+  const linesFor = period => {
+    const grossProfit = Number(period.revenue) - Number(period.cost_of_goods_sold);
+    return [
+      { label: "Receita líquida", amount: Number(period.revenue) },
+      { label: "(−) CMV", amount: -Number(period.cost_of_goods_sold) },
+      { label: "Lucro bruto", amount: grossProfit },
+      { label: "(−) Despesas variáveis", amount: -Number(period.variable_expenses) },
+      { label: "(−) Despesas fixas", amount: -Number(period.fixed_expenses) },
+      { label: "EBITDA", amount: calculateEbitda(period) }
+    ];
+  };
+  const currentLines = linesFor(latest);
+  const previousLines = previous ? linesFor(previous) : [];
+  $("#dre-current-period").textContent = formatPeriod(latest.period_start).toLocaleUpperCase("pt-BR");
+  rows.innerHTML = currentLines.map((line, index) => {
+    const vertical = latest.revenue > 0 ? formatPercent(line.amount / latest.revenue * 100) : "—";
+    const priorAmount = previousLines[index]?.amount;
+    const change = priorAmount == null ? null : line.amount - priorAmount;
+    const changePercent = priorAmount == null || priorAmount === 0 ? null : change / Math.abs(priorAmount) * 100;
+    const horizontal = change == null
+      ? "—"
+      : `${formatCurrency(change)}${changePercent == null ? "" : ` (${changePercent > 0 ? "+" : ""}${formatPercent(changePercent)})`}`;
+    return `<tr${index === 2 || index === 5 ? ' class="total"' : ""}><td>${line.label}</td><td>${escapeHTML(formatCurrency(line.amount))}</td><td>${escapeHTML(vertical)}</td><td>${escapeHTML(horizontal)}</td></tr>`;
+  }).join("");
+}
+
+function renderCashForecast(latest) {
+  const rows = $("#cash-forecast-rows");
+  if (!latest) {
+    rows.innerHTML = `<tr><td colspan="5"><div class="empty-state">Importe dados mensais e uma previsão para visualizar o fluxo de caixa.</div></td></tr>`;
+    return;
+  }
+
+  const forecastsByPeriod = new Map(cashForecasts.map(forecast => [forecast.period_start, forecast]));
+  const nextSixMonths = Array.from({ length: 6 }, (_, index) => monthOffset(latest.period_start, index + 1));
+  const selectedForecasts = nextSixMonths.map(period => forecastsByPeriod.get(period));
+  if (selectedForecasts.some(forecast => !forecast)) {
+    rows.innerHTML = `<tr><td colspan="5"><div class="empty-state">Importe uma previsão completa para os 6 meses seguintes a ${escapeHTML(formatPeriod(latest.period_start))}.</div></td></tr>`;
+    return;
+  }
+
+  let openingBalance = Number(latest.cash_balance);
+  rows.innerHTML = selectedForecasts.map((forecast, index) => {
+    const closingBalance = openingBalance + Number(forecast.expected_inflows) - Number(forecast.expected_outflows);
+    const row = `<tr><td>${escapeHTML(formatPeriod(nextSixMonths[index]))}</td><td>${escapeHTML(formatCurrency(openingBalance))}</td><td>${escapeHTML(formatCurrency(forecast.expected_inflows))}</td><td>${escapeHTML(formatCurrency(forecast.expected_outflows))}</td><td>${escapeHTML(formatCurrency(closingBalance))}</td></tr>`;
+    openingBalance = closingBalance;
+    return row;
+  }).join("");
+}
+
+function renderFinancialAnalysis() {
+  const latest = financialPeriods[financialPeriods.length - 1] || null;
+  const previousPeriod = latest ? monthOffset(latest.period_start, -1) : null;
+  const previous = previousPeriod
+    ? financialPeriods.find(period => period.period_start === previousPeriod)
+    : null;
+
+  $("#financial-period-caption").textContent = latest
+    ? `Último período realizado: ${formatPeriod(latest.period_start)}. ${financialPeriods.length} mês(es) carregado(s).`
+    : "Importe os dados mensais para calcular os indicadores.";
+
+  const metrics = {
+    "metric-pmr": latest && latest.revenue > 0
+      ? formatDays(latest.accounts_receivable / latest.revenue * daysInPeriod(latest.period_start))
+      : "—",
+    "metric-pme": latest && latest.cost_of_goods_sold > 0
+      ? formatDays(latest.inventory / latest.cost_of_goods_sold * daysInPeriod(latest.period_start))
+      : "—",
+    "metric-pmp": latest && latest.purchases > 0
+      ? formatDays(latest.supplier_payables / latest.purchases * daysInPeriod(latest.period_start))
+      : "—",
+    "metric-working-capital": latest
+      ? formatCurrency(latest.accounts_receivable + latest.inventory - latest.supplier_payables)
+      : "—",
+    "metric-break-even": latest && latest.revenue > 0
+      && (latest.revenue - latest.cost_of_goods_sold - latest.variable_expenses) > 0
+      ? formatCurrency(latest.fixed_expenses / ((latest.revenue - latest.cost_of_goods_sold - latest.variable_expenses) / latest.revenue))
+      : "—"
+  };
+  const pmr = latest && latest.revenue > 0
+    ? latest.accounts_receivable / latest.revenue * daysInPeriod(latest.period_start)
+    : null;
+  const pme = latest && latest.cost_of_goods_sold > 0
+    ? latest.inventory / latest.cost_of_goods_sold * daysInPeriod(latest.period_start)
+    : null;
+  const pmp = latest && latest.purchases > 0
+    ? latest.supplier_payables / latest.purchases * daysInPeriod(latest.period_start)
+    : null;
+  metrics["metric-cash-cycle"] = pmr == null || pme == null || pmp == null
+    ? "—"
+    : formatDays(pmr + pme - pmp);
+
+  const periodsByMonth = new Map(financialPeriods.map(period => [period.period_start, period]));
+  const ltmPeriods = latest
+    ? Array.from({ length: 12 }, (_, index) => periodsByMonth.get(monthOffset(latest.period_start, index - 11)))
+    : [];
+  const hasFullYear = ltmPeriods.length === 12 && ltmPeriods.every(Boolean);
+  const ltmEbitda = hasFullYear ? ltmPeriods.reduce((total, period) => total + calculateEbitda(period), 0) : 0;
+  const netDebt = latest ? latest.gross_debt - latest.cash_balance : 0;
+  metrics["metric-net-debt-ebitda"] = !hasFullYear
+    ? "—"
+    : ltmEbitda > 0
+      ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(netDebt / ltmEbitda)}x`
+      : "N/D";
+
+  Object.entries(metrics).forEach(([id, value]) => {
+    $(`#${id}`).textContent = value;
+  });
+  renderDreAnalysis(latest, previous);
+  renderCashForecast(latest);
+}
+
+async function loadFinancialAnalysis(companyId = getFinancialCompanyId()) {
+  const request = ++financialRequest;
+  activeFinancialCompanyId = companyId;
+  financialPeriods = [];
+  cashForecasts = [];
+  if (!companyId) {
+    renderFinancialAnalysis();
+    return true;
+  }
+  renderFinancialAnalysis();
+
+  let periodsResult;
+  let forecastsResult;
+  try {
+    [periodsResult, forecastsResult] = await Promise.all([
+      supabase
+        .from("vertice_financial_periods")
+        .select("period_start, revenue, cost_of_goods_sold, purchases, variable_expenses, fixed_expenses, accounts_receivable, inventory, supplier_payables, gross_debt, cash_balance")
+        .eq("company_id", companyId)
+        .order("period_start", { ascending: true }),
+      supabase
+        .from("vertice_cash_forecasts")
+        .select("period_start, expected_inflows, expected_outflows")
+        .eq("company_id", companyId)
+        .order("period_start", { ascending: true })
+    ]);
+  } catch (error) {
+    if (request !== financialRequest) return false;
+    console.error("Falha de rede ao carregar diagnóstico financeiro:", error);
+    showToast("Não foi possível carregar os dados financeiros. Verifique sua conexão e tente novamente.");
+    return false;
+  }
+  if (request !== financialRequest) return false;
+  if (periodsResult.error || forecastsResult.error) {
+    const error = periodsResult.error || forecastsResult.error;
+    console.error("Erro ao carregar diagnóstico financeiro:", error);
+    showToast("Não foi possível carregar os dados financeiros. Verifique a migration e tente novamente.");
+    return false;
+  }
+
+  financialPeriods = (periodsResult.data || []).map(period => ({
+    ...period,
+    period_start: period.period_start,
+    revenue: Number(period.revenue),
+    cost_of_goods_sold: Number(period.cost_of_goods_sold),
+    purchases: Number(period.purchases),
+    variable_expenses: Number(period.variable_expenses),
+    fixed_expenses: Number(period.fixed_expenses),
+    accounts_receivable: Number(period.accounts_receivable),
+    inventory: Number(period.inventory),
+    supplier_payables: Number(period.supplier_payables),
+    gross_debt: Number(period.gross_debt),
+    cash_balance: Number(period.cash_balance)
+  }));
+  cashForecasts = (forecastsResult.data || []).map(forecast => ({
+    ...forecast,
+    expected_inflows: Number(forecast.expected_inflows),
+    expected_outflows: Number(forecast.expected_outflows)
+  }));
+  renderFinancialAnalysis();
+  return true;
+}
+
+function setImportFileStatus(kind, message, isError = false) {
+  const suffix = kind === "forecast" ? "forecast" : "financial";
+  const status = $(`#${suffix}-csv-name`);
+  status.textContent = message;
+  status.classList.toggle("error", isError);
+}
+
+function bindCsvFileInput(kind) {
+  const suffix = kind === "forecast" ? "forecast" : "financial";
+  const fileInput = $(`#${suffix}-csv-file`);
+  const importButton = $(`#import-${suffix}-csv`);
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    importButton.disabled = !file;
+    setImportFileStatus(kind, file ? file.name : "Nenhum arquivo selecionado.");
+  });
+}
+
+async function importFinancialCsv(kind) {
+  const isForecast = kind === "forecast";
+  const suffix = isForecast ? "forecast" : "financial";
+  const fileInput = $(`#${suffix}-csv-file`);
+  const importButton = $(`#import-${suffix}-csv`);
+  const file = fileInput.files[0];
+  const companyId = getFinancialCompanyId();
+  if (!file || !companyId) {
+    showToast("Selecione uma empresa e um arquivo CSV.");
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    setImportFileStatus(kind, "O arquivo excede o limite de 2 MB.", true);
+    return;
+  }
+
+  importButton.disabled = true;
+  const originalLabel = importButton.textContent;
+  importButton.textContent = "Importando...";
+  try {
+    const records = parseFinancialCsv(await file.text(), isForecast);
+    if (isForecast) {
+      const latest = financialPeriods[financialPeriods.length - 1];
+      if (!latest) throw new Error("Importe os dados realizados antes de importar a previsão.");
+      if (records.length !== 6) throw new Error("A previsão deve conter exatamente 6 meses.");
+      records.sort((first, second) => first.period_start.localeCompare(second.period_start));
+      const expectedPeriods = Array.from({ length: 6 }, (_, index) => monthOffset(latest.period_start, index + 1));
+      if (records.some((record, index) => record.period_start !== expectedPeriods[index])) {
+        throw new Error("A previsão deve cobrir, sem lacunas, os 6 meses após o último período realizado.");
+      }
+    }
+
+    const table = isForecast ? "vertice_cash_forecasts" : "vertice_financial_periods";
+    const { error } = await supabase
+      .from(table)
+      .upsert(records.map(record => ({ ...record, company_id: companyId })), {
+        onConflict: "company_id,period_start"
+      });
+    if (error) throw error;
+
+    fileInput.value = "";
+    importButton.disabled = true;
+    setImportFileStatus(kind, `${records.length} linha(s) importada(s) com sucesso.`);
+    const loaded = await loadFinancialAnalysis(companyId);
+    if (loaded) showToast(isForecast ? "Previsão de caixa atualizada." : "Dados financeiros atualizados.");
+  } catch (error) {
+    console.error("Erro ao importar CSV financeiro:", error);
+    setImportFileStatus(kind, error instanceof Error ? error.message : "Não foi possível importar o arquivo.", true);
+  } finally {
+    importButton.textContent = originalLabel;
+    importButton.disabled = !fileInput.files[0];
+  }
+}
+
 const pages = {
   dashboard: "Visão geral",
   "admin-accounts": "Contas de clientes",
   companies: "Empresas",
+  client: "Minha empresa",
+  "financial-analysis": "Diagnóstico financeiro",
   accounting: "Contabilidade",
   investments: "Investimentos",
   economy: "Economia",
@@ -156,7 +623,8 @@ const pages = {
 
 function navigate(page) {
   if (!pages[page] || !["admin", "company_owner"].includes(currentRole)) return;
-  if ((currentRole === "admin" && page === "client") || (currentRole === "company_owner" && page !== "client")) return;
+  if ((currentRole === "admin" && page === "client")
+    || (currentRole === "company_owner" && !["client", "financial-analysis"].includes(page))) return;
   $$(".nav button").forEach(button => {
     const active = button.dataset.page === page;
     button.classList.toggle("active", active);
@@ -167,6 +635,8 @@ function navigate(page) {
   $("#crumb-current").textContent = pages[page];
   $("#global-search").value = "";
   renderCompanies();
+  if (page === "financial-analysis") loadFinancialAnalysis();
+  $("#client-home-link").hidden = currentRole !== "company_owner";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -182,8 +652,12 @@ async function loadCompanies() {
     return false;
   }
 
-  companies = data.map(normalizeCompany);
+  companies = (data || []).map(normalizeCompany);
+  configureFinancialCompanySelect();
   renderCompanies($("#global-search").value);
+  if ($("#page-financial-analysis").classList.contains("visible")) {
+    await loadFinancialAnalysis(getFinancialCompanyId());
+  }
   return true;
 }
 
@@ -273,8 +747,12 @@ async function handleSession(session) {
     currentRole = null;
     companies = [];
     adminAccounts = [];
+    financialPeriods = [];
+    cashForecasts = [];
+    activeFinancialCompanyId = null;
     appShell.hidden = true;
     appShell.classList.remove("client-mode");
+    $("#client-home-link").hidden = true;
     authScreen.hidden = false;
     loginForm.hidden = invitationFlow || passwordRecoveryFlow;
     signupForm.hidden = true;
@@ -343,6 +821,7 @@ async function handleSession(session) {
   if (request !== sessionRequest) return;
   currentRole = profile.role;
   appShell.classList.toggle("client-mode", isCompanyOwner);
+  $("#client-home-link").hidden = !isCompanyOwner;
   authScreen.hidden = true;
   appShell.hidden = false;
   $("#profile-name").textContent = session.user.email || "Administrador";
@@ -403,6 +882,26 @@ $("#global-search").addEventListener("input", event => {
 });
 
 $("#admin-account-search").addEventListener("input", event => renderAdminAccounts(event.target.value));
+$("#financial-company-select").addEventListener("change", event => {
+  activeFinancialCompanyId = event.target.value || null;
+  loadFinancialAnalysis(activeFinancialCompanyId);
+});
+$("#refresh-financial-analysis").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  const originalLabel = button.textContent;
+  button.textContent = "Atualizando...";
+  await loadFinancialAnalysis(getFinancialCompanyId());
+  button.textContent = originalLabel;
+  button.disabled = false;
+});
+$("#client-home-link").addEventListener("click", () => navigate("client"));
+$("#download-financial-template").addEventListener("click", downloadFinancialTemplate);
+$("#download-forecast-template").addEventListener("click", downloadForecastTemplate);
+$("#import-financial-csv").addEventListener("click", () => importFinancialCsv("financial"));
+$("#import-forecast-csv").addEventListener("click", () => importFinancialCsv("forecast"));
+bindCsvFileInput("financial");
+bindCsvFileInput("forecast");
 $("#refresh-admin-accounts").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;

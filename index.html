@@ -52,6 +52,7 @@
         <button class="active" data-page="dashboard" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"/><rect x="13.5" y="11.5" width="7" height="9" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Visão geral</button>
         <button data-page="admin-accounts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19v-1.2A4.8 4.8 0 0 1 8.3 13h1.4a4.8 4.8 0 0 1 4.8 4.8V19M16 5.2a3.2 3.2 0 0 1 0 6.2M17 13.2a4.8 4.8 0 0 1 3.5 4.6V19"/></svg>Contas</button>
         <button data-page="companies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20V6.5L12 3l8 3.5V20H4Z"/><path d="M8 9h1M15 9h1M8 13h1M15 13h1M10 20v-3h4v3"/></svg>Empresas<span class="nav-count">5</span></button>
+        <button data-page="financial-analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5h16M6.5 16v-4M12 16V6M17.5 16v-7"/><path d="m5 9 4-3 3 2 6-5"/></svg>Diagnóstico</button>
         <button data-page="accounting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h12a2 2 0 0 1 2 2v15H4v-15a2 2 0 0 1 2-2Z"/><path d="M8 8h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>Contabilidade</button>
         <button data-page="investments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/><path d="m5 7 4-3 4 2 6-4"/></svg>Investimentos</button>
         <button data-page="economy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.7-.8-1.8-1.2-3.1-1.2-1.6 0-2.7.7-2.7 1.8 0 3 6.5 1.2 6.5 4.7 0 1.4-1.4 2.5-3.5 2.5-1.5 0-2.8-.5-3.7-1.5M12 5.5v13"/></svg>Economia</button>
@@ -137,7 +138,7 @@
         <section class="page-section" id="page-investments">
           <div class="page-heading"><div><div class="eyebrow">Planejamento financeiro</div><h1>Investimentos da empresa</h1><div class="subheading">Simule alternativas para o caixa e para o crescimento do negócio.</div></div><button class="btn" data-toast="O cenário está pronto para ser revisado junto ao consultor.">Preparar cenário</button></div>
           <div class="demo-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span><strong>Simulação ilustrativa, não recomendação.</strong> Antes de investir, confirmar obrigações, capital de giro, dívidas, prazo, liquidez, tributação e objetivos da empresa com os responsáveis.</span></div>
-          <div class="stats"><article class="card stat-card"><div class="stat-label">Caixa informado (demo)</div><div class="stat-value">R$ 820 mil</div><div class="stat-foot">Saldo bancário ilustrativo</div></article><article class="card stat-card"><div class="stat-label">Reserva operacional simulada</div><div class="stat-value">R$ 600 mil</div><div class="stat-foot">Hipótese de 3 meses de despesas essenciais</div></article><article class="card stat-card"><div class="stat-label">Excedente potencial a analisar</div><div class="stat-value">R$ 220 mil</div><div class="stat-foot">Somente após validar caixa e compromissos</div></article><article class="card stat-card"><div class="stat-label">Dívidas a revisar</div><div class="stat-value">R$ 2,6 mi</div><div class="stat-foot">Compare custo da dívida e retorno esperado</div></article></div>
+          <div class="stats"><article class="card stat-card"><div class="stat-label">Caixa informado (demo)</div><div class="stat-value">R$ 820 mil</div><div class="stat-foot">Saldo bancário ilustrativo</div></article><article class="card stat-card"><div class="stat-label">Reserva operacional simulada</div><div class="stat-value">R$ 600 mil</div><div class="stat-foot">Hipótese de 3 meses de despesas essenciais</div></article><article class="card stat-card"><div class="stat-label">Excedente potencial a analisar</div><div class="stat-value">R$ 220 mil</div><div class="stat-foot">Somente após validar caixa e compromissos</div></article><article class="card stat-card"><div class="stat-label">Dívidas a revisar</div><div class="stat-value">R$ 2,6 mi</div><div class="stat-foot">Compare custo da dívida e retorno esperado</div></article><article class="card stat-card"><div class="stat-label">Dívida líquida / EBITDA (demo)</div><div class="stat-value">1,32x</div><div class="stat-foot">(R$ 2,6 mi − R$ 0,82 mi) ÷ R$ 1,35 mi</div></article></div>
           <article class="card panel"><div class="panel-heading"><div><div class="panel-title">Cenário de uso do excedente</div><div class="panel-caption">Alternativas para discussão com a gestão — não executar automaticamente</div></div><span class="company-status">Simulação · R$ 220 mil</span></div><div class="recommendations"><div class="recommendation"><span class="recommendation-number">1</span><div><strong>R$ 88 mil · Liquidez e proteção de caixa (40%)</strong><p>Avaliar alternativas de baixo risco e resgate compatível com o calendário de pagamentos e a política financeira da empresa.</p></div></div><div class="recommendation"><span class="recommendation-number">2</span><div><strong>R$ 77 mil · Equipamentos e eficiência (35%)</strong><p>Comparar retorno operacional, custo total, prazo de implantação e necessidade de financiamento do projeto.</p></div></div><div class="recommendation"><span class="recommendation-number">3</span><div><strong>R$ 55 mil · Tecnologia e vendas (25%)</strong><p>Estimar ganhos de produtividade e receita, com metas, responsáveis e acompanhamento do fluxo de caixa.</p></div></div></div><div class="section-note">Percentuais e valores são apenas um exemplo de cenário. A decisão final depende do diagnóstico completo, documentação, validação contábil e aprovação dos responsáveis pela empresa.</div></article>
         </section>
 
@@ -154,8 +155,8 @@
           <div class="section-grid"><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3.5h8l4.5 4.7v12.3H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v5h4.5M8 13h8M8 16.5h6"/></svg></div><h3>Cadastro de empresas</h3><p>Lista demonstrativa das empresas acompanhadas e dados básicos de faturamento.</p><button class="btn" data-export>Baixar CSV</button></article><article class="card report-card"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5h16M6.5 16V9.5M12 16V4.5M17.5 16v-4"/></svg></div><h3>Diagnóstico financeiro</h3><p>Consulte o balanço, a DRE simplificada e o cenário de investimentos demonstrativo.</p><button class="btn" data-page-link="accounting">Ver balanço</button></article></div>
         </section>
         <section class="page-section" id="page-client">
-          <div class="page-heading"><div><div class="eyebrow">Área da empresa</div><h1>Minha empresa</h1><div class="subheading">Acompanhe o cadastro e os próximos passos da consultoria.</div></div></div>
-          <div class="demo-note"><span>Seu acesso é restrito à empresa vinculada à sua conta. Os módulos financeiros serão liberados conforme os serviços contratados.</span></div>
+          <div class="page-heading"><div><div class="eyebrow">Área da empresa</div><h1>Minha empresa</h1><div class="subheading">Acompanhe o cadastro e os próximos passos da consultoria.</div></div><button class="btn btn-primary" data-page-link="financial-analysis">Abrir diagnóstico financeiro</button></div>
+          <div class="demo-note"><span>Seu acesso é restrito à empresa vinculada. No diagnóstico, informe os dados mensais e a previsão de caixa para análise conjunta com a consultoria.</span></div>
           <article class="card panel client-company-card">
             <div class="panel-heading"><div><div class="panel-title">Dados da empresa</div><div class="panel-caption">Informações cadastradas na criação da conta</div></div><span class="company-status" id="client-company-status">Carregando</span></div>
             <h2 class="client-company-name" id="client-company-name">Carregando...</h2>
@@ -163,8 +164,51 @@
           </article>
           <article class="card panel client-next-steps">
             <div class="panel-title">Próximos passos</div>
-            <p>Depois que o cadastro for validado, sua consultoria poderá organizar os dados contábeis e financeiros para iniciar o diagnóstico.</p>
+            <p>Preencha os dados mensais e a previsão de caixa no diagnóstico financeiro; a consultoria poderá validar as informações em conjunto com você.</p>
           </article>
+        </section>
+        <section class="page-section" id="page-financial-analysis">
+          <div class="page-heading financial-page-heading">
+            <div><div class="eyebrow">Análise financeira</div><h1>Diagnóstico da empresa</h1><div class="subheading" id="financial-period-caption">Importe os dados mensais para calcular os indicadores.</div></div>
+            <div class="heading-actions"><button class="btn" id="client-home-link" type="button" hidden>Minha empresa</button><button class="btn" id="refresh-financial-analysis" type="button">Atualizar análise</button></div>
+          </div>
+          <div class="demo-note"><span>PMR = contas a receber ÷ receita × dias do mês; PME = estoque ÷ CMV × dias; PMP = fornecedores ÷ compras × dias. O ciclo financeiro é PMR + PME − PMP e a necessidade de capital de giro é contas a receber + estoque − fornecedores. EBITDA é receita − CMV − despesas variáveis − despesas fixas. A dívida líquida/EBITDA usa os últimos 12 meses completos. São estimativas com saldos de fechamento; valide critérios contábeis antes de usar.</span></div>
+          <div class="financial-company-controls">
+            <label class="form-field" id="financial-company-field" for="financial-company-select"><span>Empresa</span><select id="financial-company-select"></select></label>
+          </div>
+          <div class="stats analysis-stats">
+            <article class="card stat-card"><div class="stat-label">PMR</div><div class="stat-value" id="metric-pmr">—</div><div class="stat-foot">Prazo médio de recebimento</div></article>
+            <article class="card stat-card"><div class="stat-label">PME</div><div class="stat-value" id="metric-pme">—</div><div class="stat-foot">Prazo médio de estoque</div></article>
+            <article class="card stat-card"><div class="stat-label">PMP</div><div class="stat-value" id="metric-pmp">—</div><div class="stat-foot">Prazo médio de pagamento</div></article>
+            <article class="card stat-card"><div class="stat-label">Ciclo financeiro</div><div class="stat-value" id="metric-cash-cycle">—</div><div class="stat-foot">PMR + PME − PMP</div></article>
+            <article class="card stat-card"><div class="stat-label">Necessidade de capital de giro</div><div class="stat-value" id="metric-working-capital">—</div><div class="stat-foot">Contas a receber + estoque − fornecedores</div></article>
+            <article class="card stat-card"><div class="stat-label">Dívida líquida / EBITDA</div><div class="stat-value" id="metric-net-debt-ebitda">—</div><div class="stat-foot">Dívida líquida dividida pelo EBITDA LTM</div></article>
+            <article class="card stat-card"><div class="stat-label">Ponto de equilíbrio mensal</div><div class="stat-value" id="metric-break-even">—</div><div class="stat-foot">Custos fixos ÷ margem de contribuição</div></article>
+          </div>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">DRE — análise horizontal e vertical</div><div class="panel-caption">Comparação mensal; custos e despesas aparecem como valores negativos.</div></div></div>
+            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>CONTA</th><th id="dre-current-period">MÊS ATUAL</th><th>% DA RECEITA</th><th>VARIAÇÃO VS. ANTERIOR</th></tr></thead><tbody id="dre-analysis-rows"></tbody></table></div>
+          </article>
+          <article class="card panel analysis-panel">
+            <div class="panel-heading"><div><div class="panel-title">Fluxo de caixa projetado</div><div class="panel-caption">Saldo inicial + entradas previstas − saídas previstas, pelos próximos 6 meses.</div></div></div>
+            <div class="analysis-table-wrap"><table class="statement-table analysis-table"><thead><tr><th>MÊS</th><th>SALDO INICIAL</th><th>ENTRADAS</th><th>SAÍDAS</th><th>SALDO PROJETADO</th></tr></thead><tbody id="cash-forecast-rows"></tbody></table></div>
+          </article>
+          <div class="section-grid financial-import-grid">
+            <article class="card panel">
+              <div class="panel-title">Importar dados mensais</div>
+              <p class="panel-caption">Uma linha por mês. Inclua receita, custos, saldos, dívida e caixa de fechamento.</p>
+              <div class="upload-actions"><button class="btn" id="download-financial-template" type="button">Baixar modelo CSV</button><label class="btn" for="financial-csv-file">Selecionar CSV</label><input id="financial-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-financial-csv" type="button" disabled>Importar dados</button></div>
+              <p class="upload-file-name" id="financial-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">Use os cabeçalhos do modelo; valores numéricos podem usar vírgula decimal. Datas no formato AAAA-MM.</p>
+            </article>
+            <article class="card panel">
+              <div class="panel-title">Importar previsão de caixa</div>
+              <p class="panel-caption">Informe entradas e saídas previstas para os 6 meses após o último período realizado.</p>
+              <div class="upload-actions"><button class="btn" id="download-forecast-template" type="button">Baixar modelo de previsão</button><label class="btn" for="forecast-csv-file">Selecionar CSV</label><input id="forecast-csv-file" type="file" accept=".csv,text/csv" hidden><button class="btn btn-primary" id="import-forecast-csv" type="button" disabled>Importar previsão</button></div>
+              <p class="upload-file-name" id="forecast-csv-name" aria-live="polite">Nenhum arquivo selecionado.</p>
+              <p class="section-note">O saldo inicial da projeção é o caixa do último mês realizado; o saldo projetado de cada mês é levado ao seguinte.</p>
+            </article>
+          </div>
         </section>
         <div class="disclaimer">Vértice é um protótipo demonstrativo. Dados reais exigem armazenamento seguro, validação contábil, consentimentos e revisão regulatória aplicável.</div>
       </div>
